@@ -3,7 +3,7 @@
 // DELETE /api/chats/:id - 删除聊天记录
 
 import { downloadFromTelegram, uploadToTelegram, deleteTelegramMessage } from '../../utils/telegram.js';
-import { normalizeMessage } from '../index.js';
+import { normalizeMessage } from './index.js';
 
 export async function onRequestGet(context) {
     try {
