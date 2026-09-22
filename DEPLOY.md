@@ -66,7 +66,11 @@
    - **变量名称**：`ACCESS_PASSWORD`，**值**：设置你的访问密码
    - **变量名称**：`TG_BOT_TOKEN`，**值**：你的 Telegram Bot Token
    - **变量名称**：`TG_CHAT_ID`，**值**：你的 Telegram 频道 Chat ID
-6. 点击 **保存**
+6. （可选）站点自定义变量：
+   - `SITE_NAME`：站点名称（默认"角色卡仓库"）
+   - `SITE_TITLE`：浏览器标签页标题
+   - `SITE_BACKGROUND`：背景图 URL
+7. 点击 **保存**
 
 ### 5. 绑定 KV 命名空间
 
@@ -171,6 +175,10 @@ wrangler pages deploy public
 - 原因 3：环境变量设置后未重新部署，改完记得重试部署
 - 自查方法：浏览器访问 `https://api.telegram.org/bot<你的Token>/getChat?chat_id=<你的ChatID>`，
   能返回频道信息说明 Token 和 Chat ID 都正确，剩下的原因就是 Bot 不是管理员
+
+**Q2.6: 批量上传时部分失败，提示 "Too Many Requests"**
+- 原因：Telegram Bot API 限制每频道约每分钟 20 条消息，一次上传太多会被限流
+- 解决：一次上传不要超过 20 张，分批进行；单张失败会自动等待 15 秒重试一次
 
 **Q3: 图片无法显示**
 - 原因：Telegram Bot 不是频道管理员，或 Chat ID 错误

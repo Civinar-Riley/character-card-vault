@@ -56,17 +56,19 @@ export async function onRequestPut(context) {
 
         await context.env.CARDS_KV.put(`card:${id}`, JSON.stringify(card));
 
-        if (body.tags !== undefined) {
+        if (body.tags !== undefined || body.userTags !== undefined) {
             const allCards = [];
             const listResult = await context.env.CARDS_KV.list({ prefix: 'card:' });
             for (const key of listResult.keys) {
                 const c = await context.env.CARDS_KV.get(key.name, { type: 'json' });
                 if (c) allCards.push(c);
             }
-            
+
+            // 标签索引合并内置标签和自定义标签
             const allTags = new Set();
             allCards.forEach(c => {
                 if (c.tags) c.tags.forEach(t => allTags.add(t));
+                if (c.userTags) c.userTags.forEach(t => allTags.add(t));
             });
             await context.env.CARDS_KV.put('tags', JSON.stringify([...allTags]));
         }

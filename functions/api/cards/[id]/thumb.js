@@ -24,7 +24,7 @@ export async function onRequestGet(context) {
         }
 
         return new Response(response.body, {
-            headers: { 'Content-Type': 'image/png' }
+            headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' }
         });
     } catch (error) {
         return new Response(null, { status: 500 });

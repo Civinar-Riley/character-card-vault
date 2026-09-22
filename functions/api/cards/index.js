@@ -85,7 +85,7 @@ export async function onRequestGet(context) {
         }
 
         if (tag) {
-            cards = cards.filter(c => c.tags && c.tags.includes(tag));
+            cards = cards.filter(c => (c.tags && c.tags.includes(tag)) || (c.userTags && c.userTags.includes(tag)));
         }
         if (creator) {
             cards = cards.filter(c => c.creator && c.creator.includes(creator));
@@ -290,7 +290,8 @@ export async function onRequestPost(context) {
         await context.env.CARDS_KV.put(`card:${fingerprint}`, JSON.stringify(cardIndex));
 
         const existingTags = await context.env.CARDS_KV.get('tags', { type: 'json' }) || [];
-        const allTags = new Set([...existingTags, ...tags]);
+        // 内置标签和自定义标签都并入标签索引（标签云）
+        const allTags = new Set([...existingTags, ...tags, ...userTags]);
         await context.env.CARDS_KV.put('tags', JSON.stringify([...allTags]));
 
         const baseUrl = new URL(context.request.url).origin;

@@ -13,9 +13,9 @@ export async function onRequest(context) {
         return new Response(null, { headers: corsHeaders });
     }
 
-    // 登录接口不需要认证
+    // 登录接口和站点配置接口不需要认证
     const url = new URL(context.request.url);
-    if (url.pathname === '/api/auth/login') {
+    if (url.pathname === '/api/auth/login' || url.pathname === '/api/config') {
         const response = await context.next();
         const newResponse = new Response(response.body, response);
         Object.entries(corsHeaders).forEach(([key, value]) => {

@@ -86,10 +86,15 @@ export async function onRequestPost(context) {
             importedChats++;
         }
 
-        // 合并标签
+        // 合并标签（含卡片自定义标签）
         if (tags.length > 0) {
             const existingTags = await context.env.CARDS_KV.get('tags', { type: 'json' }) || [];
             await context.env.CARDS_KV.put('tags', JSON.stringify([...new Set([...existingTags, ...tags])]));
+        }
+        const userTags = cards.flatMap(c => Array.isArray(c.userTags) ? c.userTags : []);
+        if (userTags.length > 0) {
+            const existingTags = await context.env.CARDS_KV.get('tags', { type: 'json' }) || [];
+            await context.env.CARDS_KV.put('tags', JSON.stringify([...new Set([...existingTags, ...userTags])]));
         }
 
         return new Response(JSON.stringify({

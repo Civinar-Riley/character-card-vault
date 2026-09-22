@@ -20,11 +20,6 @@
             --border: rgba(255, 255, 255, 0.06);
             --glass: rgba(255, 255, 255, 0.03);
             
-            /* 亮色主题 */
-            --bg-deep-light: #f5f3f0;
-            --bg-surface-light: #ffffff;
-            --accent-light: #b8860b;
-            
             /* 动画变量 */
             --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -367,7 +362,7 @@
         .card-image {
             width: 100%;
             aspect-ratio: 1;
-            object-fit: cover;
+            object-fit: contain;
             background: var(--bg-surface);
         }
 
@@ -423,7 +418,7 @@
         .card-list-image {
             width: 80px;
             height: 80px;
-            object-fit: cover;
+            object-fit: contain;
             border-radius: 8px;
             background: var(--bg-surface);
         }
@@ -489,9 +484,10 @@
         .detail-image {
             width: 200px;
             height: 200px;
-            object-fit: cover;
+            object-fit: contain;
             border-radius: 12px;
             border: 2px solid var(--border);
+            background: var(--bg-surface);
         }
 
         .detail-info {
@@ -838,6 +834,27 @@
             display: block;
         }
 
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state p {
+            font-size: 16px;
+        }
+
+        .empty-state .empty-hint {
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
         /* 响应式 */
         @media (max-width: 768px) {
             .navbar-content {
@@ -899,30 +916,52 @@
         .stagger-3 { animation-delay: 0.3s; }
         .stagger-4 { animation-delay: 0.4s; }
 
-        /* 亮色主题 */
+        /* 亮色主题：整体覆盖变量，所有使用变量的组件全局切换 */
         body.light-theme {
-            background-color: var(--bg-deep-light);
-            color: #1a1a1a;
+            --bg-deep: #f5f3f0;
+            --bg-surface: #ffffff;
+            --bg-card: #ffffff;
+            --accent: #a67c00;
+            --accent-glow: rgba(166, 124, 0, 0.25);
+            --text-primary: #1f2329;
+            --text-secondary: #6b7280;
+            --border: rgba(0, 0, 0, 0.12);
+            --glass: rgba(0, 0, 0, 0.03);
+            background-color: var(--bg-deep);
+            color: var(--text-primary);
+        }
+
+        body.light-theme .bg-gradient {
+            background:
+                radial-gradient(ellipse at 20% 80%, rgba(166, 124, 0, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(0, 0, 0, 0.05) 0%, transparent 50%),
+                linear-gradient(135deg, #f5f3f0 0%, #ece9e4 100%);
         }
 
         body.light-theme .navbar {
-            background: rgba(255, 255, 255, 0.8);
-        }
-
-        body.light-theme .card,
-        body.light-theme .card-list-item {
-            background: var(--bg-surface-light);
-            border-color: rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.85);
         }
 
         body.light-theme .detail-page {
             background: rgba(255, 255, 255, 0.95);
         }
 
-        body.light-theme .input-field,
-        body.light-theme .search-input {
-            background: rgba(0, 0, 0, 0.03);
-            border-color: rgba(0, 0, 0, 0.1);
+        body.light-theme .message.assistant {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        body.light-theme .detail-close {
+            background: rgba(0, 0, 0, 0.08);
+        }
+
+        /* 渐变文字改为深金色调，避免浅色背景上看不清 */
+        body.light-theme .login-title,
+        body.light-theme .navbar-brand,
+        body.light-theme .detail-title {
+            background: linear-gradient(135deg, #8a6508 0%, #b8860b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
     </style>
 </head>
@@ -978,6 +1017,14 @@
                     <option value="old">最早上传</option>
                     <option value="az">按名称排序</option>
                 </select>
+                <select class="input-field" id="searchScope" style="width: auto; padding: 8px 12px;" title="搜索范围">
+                    <option value="all">全部字段</option>
+                    <option value="name">名称</option>
+                    <option value="creator">作者</option>
+                    <option value="description">描述</option>
+                    <option value="first_mes">开场白</option>
+                    <option value="system_prompt">系统提示词</option>
+                </select>
                 <label style="display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 14px;">
                     <input type="checkbox" id="favoriteFilter"> 仅收藏
                 </label>
@@ -1000,6 +1047,7 @@
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 <button class="btn btn-secondary" id="batchSelectAll">全选本页</button>
                 <button class="btn btn-secondary" id="batchFavorite">批量收藏</button>
+                <button class="btn btn-secondary" id="batchUnfavorite">批量取消收藏</button>
                 <button class="btn btn-secondary" id="batchExport">批量导出</button>
                 <button class="btn btn-secondary" id="batchDelete">批量删除</button>
                 <button class="btn btn-secondary" id="batchExit">退出多选</button>
@@ -1029,12 +1077,14 @@
             <div class="upload-zone" id="uploadZone">
                 <div class="upload-icon">📁</div>
                 <p class="upload-text">拖拽文件到此处，或点击选择</p>
-                <p class="upload-hint">支持 PNG 格式，最大 20MB</p>
+                <p class="upload-hint">支持 PNG / JSON 格式，单个最大 50MB</p>
+                <p class="upload-hint" style="color: var(--accent);">⚠️ Telegram 限流：一次不要上传超过 20 张，否则会被限流失败</p>
                 <input type="file" id="fileInput" accept=".png,.json" multiple style="display: none;">
             </div>
             <div class="progress-bar" id="progressBar" style="display: none;">
                 <div class="progress-fill" id="progressFill"></div>
             </div>
+            <p id="uploadStatus" style="display: none; margin-top: 8px; font-size: 13px; color: var(--text-secondary); text-align: center; word-break: break-all;"></p>
             <div class="modal-actions">
                 <button class="btn btn-secondary" id="cancelUpload">取消</button>
                 <button class="btn" id="confirmUpload" disabled>确认导入</button>
@@ -1069,7 +1119,8 @@
             hasChatOnly: false,
             selectMode: false,
             selectedIds: new Set(),
-            tagManage: false
+            tagManage: false,
+            searchScope: 'all'
         };
 
         // 当前查看详情的角色卡
@@ -1078,6 +1129,9 @@
         // API 基础 URL
         const API_BASE = '/api';
 
+        // 内联 SVG 占位图（/placeholder.png 文件不存在）
+        const PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='12' fill='%2312151c'/%3E%3Ctext x='50' y='58' font-size='38' text-anchor='middle'%3E%F0%9F%97%82%EF%B8%8F%3C/text%3E%3C/svg%3E";
+
         // 从 URL 恢复筛选状态（刷新/分享链接保留）
         (function restoreFiltersFromUrl() {
             const params = new URLSearchParams(location.search);
@@ -1085,6 +1139,10 @@
                 state.searchQuery = params.get('q');
                 document.getElementById('searchInput').value = state.searchQuery;
                 document.getElementById('searchClear').classList.add('visible');
+            }
+            if (params.get('scope')) {
+                state.searchScope = params.get('scope');
+                document.getElementById('searchScope').value = state.searchScope;
             }
             if (params.get('tag')) state.selectedTag = params.get('tag');
             if (params.get('favorite') === 'true') {
@@ -1095,6 +1153,25 @@
                 state.hasChatOnly = true;
                 document.getElementById('chatFilter').checked = true;
             }
+        })();
+
+        // 站点自定义配置（环境变量 SITE_NAME / SITE_TITLE / SITE_BACKGROUND，公开接口）
+        (async function applySiteConfig() {
+            try {
+                const res = await fetch(`${API_BASE}/config`);
+                const data = await res.json();
+                if (!data.ok) return;
+                const { siteName, siteTitle, siteBackground } = data.data;
+                if (siteTitle) document.title = siteTitle;
+                if (siteName) {
+                    document.querySelector('.navbar-brand').textContent = siteName;
+                    document.querySelector('.login-title').textContent = siteName;
+                }
+                if (siteBackground) {
+                    document.querySelector('.bg-gradient').style.background =
+                        `linear-gradient(rgba(10, 12, 16, 0.75), rgba(10, 12, 16, 0.75)), url("${siteBackground}") center / cover no-repeat`;
+                }
+            } catch (e) { /* 使用默认品牌 */ }
         })();
 
         // 工具函数
@@ -1146,16 +1223,27 @@
             URL.revokeObjectURL(a.href);
         }
 
-        // 加载需要认证的缩略图
+        // 缩略图会话缓存（cardId -> blobURL），避免重复从 Telegram 下载
+        const thumbCache = new Map();
+
+        // 加载需要认证的缩略图（并行）
         async function loadThumbs(cards) {
-            for (const card of cards) {
-                if (!card.thumbUrl) continue;
+            const pending = cards.filter(c => c.thumbUrl && !thumbCache.has(c.id));
+            await Promise.all(pending.map(async card => {
                 try {
                     const res = await fetch(card.thumbUrl, { headers: { 'Authorization': `Bearer ${state.token}` } });
-                    if (!res.ok) continue;
-                    const img = document.querySelector(`img[data-card-id="${card.id}"]`);
-                    if (img) img.src = URL.createObjectURL(await res.blob());
+                    if (res.ok) {
+                        thumbCache.set(card.id, URL.createObjectURL(await res.blob()));
+                    }
                 } catch (e) { /* 保持占位图 */ }
+            }));
+            for (const card of cards) {
+                const url = thumbCache.get(card.id);
+                if (!url) continue;
+                // 设置所有匹配的图片（网格/列表/详情页可能同时存在同一张卡）
+                document.querySelectorAll(`img[data-card-id="${card.id}"]`).forEach(img => {
+                    img.src = url;
+                });
             }
         }
 
@@ -1195,7 +1283,10 @@
                     sort: state.sortBy
                 });
 
-                if (state.searchQuery) params.append('q', state.searchQuery);
+                if (state.searchQuery) {
+                    params.append('q', state.searchQuery);
+                    params.append('scope', state.searchScope);
+                }
                 if (state.selectedTag) params.append('tag', state.selectedTag);
                 if (state.favoritesOnly) params.append('favorite', 'true');
                 if (state.hasChatOnly) params.append('hasChat', 'true');
@@ -1222,12 +1313,24 @@
         function renderCards() {
             const container = document.getElementById('cardsContainer');
 
+            if (state.cards.length === 0) {
+                container.className = '';
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🗂️</div>
+                        <p>没有找到匹配的角色卡</p>
+                        <p class="empty-hint">试试调整搜索关键词或清除筛选条件</p>
+                    </div>
+                `;
+                return;
+            }
+
             if (state.viewMode === 'grid') {
                 container.className = 'cards-grid';
                 container.innerHTML = state.cards.map((card, index) => `
                     <div class="card animate-in stagger-${(index % 4) + 1}" data-id="${card.id}">
                         ${state.selectMode ? `<label style="position:absolute;top:8px;left:8px;z-index:2;background:rgba(0,0,0,0.6);border-radius:6px;padding:6px;" onclick="event.stopPropagation()"><input type="checkbox" class="card-check" data-id="${card.id}" ${state.selectedIds.has(card.id) ? 'checked' : ''}></label>` : ''}
-                        <img class="card-image" data-card-id="${card.id}" src="/placeholder.png" alt="${esc(card.name)}" loading="lazy">
+                        <img class="card-image" data-card-id="${card.id}" src="${PLACEHOLDER}" alt="${esc(card.name)}" loading="lazy">
                         <div class="card-content">
                             <h3 class="card-title">${esc(card.name)}</h3>
                             <p class="card-creator">${esc(card.creator || '未知作者')}</p>
@@ -1244,7 +1347,7 @@
                 container.innerHTML = state.cards.map((card, index) => `
                     <div class="card-list-item animate-in stagger-${(index % 4) + 1}" data-id="${card.id}">
                         ${state.selectMode ? `<label style="display:flex;align-items:center;" onclick="event.stopPropagation()"><input type="checkbox" class="card-check" data-id="${card.id}" ${state.selectedIds.has(card.id) ? 'checked' : ''}></label>` : ''}
-                        <img class="card-list-image" data-card-id="${card.id}" src="/placeholder.png" alt="${esc(card.name)}" loading="lazy">
+                        <img class="card-list-image" data-card-id="${card.id}" src="${PLACEHOLDER}" alt="${esc(card.name)}" loading="lazy">
                         <div class="card-list-content">
                             <h3 class="card-title">${esc(card.name)}</h3>
                             <p class="card-creator">${esc(card.creator || '未知作者')}</p>
@@ -1415,7 +1518,7 @@
                 
                 document.getElementById('detailContent').innerHTML = `
                     <div class="detail-header">
-                        <img class="detail-image" data-card-id="${card.id}" src="/placeholder.png" alt="${esc(card.name)}">
+                        <img class="detail-image" data-card-id="${card.id}" src="${PLACEHOLDER}" alt="${esc(card.name)}">
                         <div class="detail-info">
                             <h1 class="detail-title">${esc(card.name)}</h1>
                             <p class="detail-creator">作者：${esc(card.creator || '未知')}<button class="creator-edit" onclick="editCreator()" title="编辑作者">✎</button></p>
@@ -1423,6 +1526,10 @@
                                 ${(card.tags || []).map(tag => `
                                     <span class="card-tag">${esc(tag)}</span>
                                 `).join('')}
+                                ${(card.userTags || []).map(tag => `
+                                    <span class="card-tag" style="background: rgba(100, 200, 255, 0.1); color: #7ec8e3;">${esc(tag)}</span>
+                                `).join('')}
+                                <button class="creator-edit" onclick="editUserTags()" title="编辑自定义标签">＋标签</button>
                             </div>
                             <div class="detail-actions">
                                 <button class="btn btn-secondary" onclick="toggleFavorite('${card.id}', ${card.favorited})">
@@ -1498,6 +1605,25 @@
                 loadCardChats(card.id);
             } catch (error) {
                 alert('加载详情失败: ' + error.message);
+            }
+        }
+
+        // 编辑自定义标签（userTags，逗号分隔）
+        async function editUserTags() {
+            if (!currentCard) return;
+            const input = prompt('自定义标签（用逗号分隔，留空清空全部）：', (currentCard.userTags || []).join(', '));
+            if (input === null) return;
+            const userTags = input.split(/[,，]/).map(t => t.trim()).filter(Boolean);
+            try {
+                await api(`/cards/${currentCard.id}`, {
+                    method: 'PUT',
+                    body: { userTags }
+                });
+                showDetail(currentCard.id);
+                loadCards(state.currentPage);
+                loadTags();
+            } catch (error) {
+                alert('保存失败: ' + error.message);
             }
         }
 
@@ -1653,6 +1779,22 @@
             loadCards(state.currentPage);
         }
 
+        async function batchUnfavorite() {
+            const ids = [...state.selectedIds];
+            if (!ids.length) return alert('请先选择角色卡');
+            if (!confirm(`确定要取消收藏选中的 ${ids.length} 张角色卡吗？`)) return;
+            for (const id of ids) {
+                try {
+                    await api(`/cards/${id}`, { method: 'PUT', body: { favorited: false } });
+                } catch (error) {
+                    console.error(`取消收藏失败 ${id}:`, error);
+                }
+            }
+            alert('批量取消收藏完成');
+            toggleBatchMode(false);
+            loadCards(state.currentPage);
+        }
+
         async function batchDelete() {
             const ids = [...state.selectedIds];
             if (!ids.length) return alert('请先选择角色卡');
@@ -1727,6 +1869,12 @@
             loadCards();
         });
 
+        // 搜索范围
+        document.getElementById('searchScope').addEventListener('change', (e) => {
+            state.searchScope = e.target.value;
+            loadCards();
+        });
+
         // 搜索
         let searchTimeout;
         document.getElementById('searchInput').addEventListener('input', (e) => {
@@ -1766,6 +1914,7 @@
             renderCards();
         });
         document.getElementById('batchFavorite').addEventListener('click', batchFavorite);
+        document.getElementById('batchUnfavorite').addEventListener('click', batchUnfavorite);
         document.getElementById('batchDelete').addEventListener('click', batchDelete);
         document.getElementById('batchExport').addEventListener('click', batchExport);
 
@@ -1804,6 +1953,10 @@
 
         // 上传功能
         document.getElementById('importBtn').addEventListener('click', () => {
+            document.getElementById('progressBar').style.display = 'none';
+            document.getElementById('uploadStatus').style.display = 'none';
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('confirmUpload').disabled = selectedFiles.length === 0;
             document.getElementById('uploadModal').classList.add('active');
         });
 
@@ -1851,62 +2004,107 @@
             }
         }
 
+        // XHR 上传（fetch 不支持上传进度），onProgress 上报 0~1 的字节进度
+        function uploadFile(formData, onProgress) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `${API_BASE}/cards`);
+                xhr.setRequestHeader('Authorization', `Bearer ${state.token}`);
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) onProgress(e.loaded / e.total);
+                };
+                xhr.onload = () => {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        if (data.ok) resolve(data);
+                        else reject(new Error(data.error || '上传失败'));
+                    } catch (e) {
+                        reject(new Error('上传失败'));
+                    }
+                };
+                xhr.onerror = () => reject(new Error('网络错误'));
+                xhr.send(formData);
+            });
+        }
+
         document.getElementById('confirmUpload').addEventListener('click', async () => {
             if (selectedFiles.length === 0) return;
-            
+
             const progressBar = document.getElementById('progressBar');
             const progressFill = document.getElementById('progressFill');
+            const uploadStatus = document.getElementById('uploadStatus');
             progressBar.style.display = 'block';
-            
+            uploadStatus.style.display = 'block';
+            document.getElementById('confirmUpload').disabled = true;
+
             let uploaded = 0;
-            
-            for (const file of selectedFiles) {
+            const failed = [];
+            const total = selectedFiles.length;
+
+            for (let i = 0; i < total; i++) {
+                const file = selectedFiles[i];
                 const formData = new FormData();
                 formData.append('file', file);
 
-                // 上传失败自动重试一次
+                // 总进度 = 已完成张数 + 当前张的小数进度
+                const setProgress = (fileFrac) => {
+                    progressFill.style.width = `${(((i + fileFrac) / total) * 100).toFixed(1)}%`;
+                    uploadStatus.textContent = `上传中 ${i + 1}/${total}：${file.name} ${Math.round(fileFrac * 100)}%`;
+                };
+
+                // 上传失败自动重试一次（Telegram 限流时等待 15 秒再试）
                 let lastError = null;
                 for (let attempt = 0; attempt < 2; attempt++) {
                     try {
-                        await api('/cards', {
-                            method: 'POST',
-                            body: formData
-                        });
+                        await uploadFile(formData, setProgress);
                         lastError = null;
                         break;
                     } catch (error) {
                         lastError = error;
                         console.error('上传失败（第 ' + (attempt + 1) + ' 次）:', error);
+                        if (attempt === 0 && /Too Many Requests|429/i.test(error.message)) {
+                            uploadStatus.textContent = `Telegram 限流，15 秒后重试：${file.name}`;
+                            await new Promise(r => setTimeout(r, 15000));
+                        }
                     }
                 }
 
                 if (!lastError) {
                     uploaded++;
-                    progressFill.style.width = `${(uploaded / selectedFiles.length) * 100}%`;
                 } else {
-                    alert(`上传失败: ${file.name} - ${lastError.message}`);
+                    failed.push(`${file.name}（${lastError.message}）`);
                 }
+                progressFill.style.width = `${(((i + 1) / total) * 100).toFixed(1)}%`;
             }
-            
-            alert(`上传完成: ${uploaded}/${selectedFiles.length}`);
+
+            uploadStatus.textContent = failed.length
+                ? `完成，失败 ${failed.length} 张：${failed.join('、')}`
+                : `上传完成: ${uploaded}/${total}`;
+            alert(failed.length
+                ? `上传完成: ${uploaded}/${total}\n失败：\n${failed.join('\n')}`
+                : `上传完成: ${uploaded}/${total}`);
             document.getElementById('uploadModal').classList.remove('active');
+            document.getElementById('confirmUpload').disabled = false;
             loadCards();
         });
 
         // 全量备份
         document.getElementById('exportAllBtn').addEventListener('click', async () => {
             if (!confirm('确定要导出全量备份吗？')) return;
-            
+
             try {
                 const response = await fetch(`${API_BASE}/export/all`, {
                     headers: { 'Authorization': `Bearer ${state.token}` }
                 });
-                
-                const blob = await response.blob();
+
+                // 去掉 {ok, data} 包装层，与批量导出格式一致
+                const data = await response.json();
+                if (!data.ok) throw new Error(data.error || '导出失败');
+                const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `character-cards-backup-${Date.now()}.zip`;
+                a.download = `character-cards-full-backup-${Date.now()}.json`;
                 a.click();
                 URL.revokeObjectURL(url);
             } catch (error) {
