@@ -31,10 +31,15 @@ export async function onRequestGet(context) {
             });
         }
 
+        // 根据原始文件名推导 MIME 类型和扩展名（PNG 卡 / JSON 卡）
+        const isJson = (card.telegramFileName || '').toLowerCase().endsWith('.json');
+        const contentType = isJson ? 'application/json' : 'image/png';
+        const ext = isJson ? '.json' : '.png';
+
         return new Response(response.body, {
             headers: {
-                'Content-Type': 'image/png',
-                'Content-Disposition': `attachment; filename="${card.name || 'character'}.png"`
+                'Content-Type': contentType,
+                'Content-Disposition': `attachment; filename="${card.name || 'character'}${ext}"`
             }
         });
     } catch (error) {

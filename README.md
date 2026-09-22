@@ -4,12 +4,12 @@
 
 ## 功能特性
 
-- **角色卡管理**：支持 PNG 格式角色卡导入，自动解析元数据
-- **搜索筛选**：按名称、作者、描述、标签等多维度搜索
-- **标签系统**：自定义标签，支持标签云筛选
-- **聊天记录**：导入/查看/编辑/导出聊天记录
-- **批量操作**：多选批量删除、导出
-- **数据备份**：支持全量数据备份导出
+- **角色卡管理**：支持 PNG / JSON 格式角色卡导入，自动解析元数据，上传失败自动重试
+- **搜索筛选**：按名称、作者、描述、标签等多维度搜索，支持范围筛选（标签/收藏/有聊天记录），筛选状态同步到 URL（刷新/分享可保留）
+- **标签系统**：标签云筛选，支持标签的新建、重命名、删除（同步应用到所有角色卡）
+- **聊天记录**：在角色卡详情中导入 / 查看 / 导出 / 删除聊天记录
+- **批量操作**：多选后批量收藏、批量删除、批量导出
+- **数据备份**：全量备份导出，支持从备份文件恢复（已存在的内容自动跳过）
 - **响应式设计**：适配桌面和移动端
 - **暗色/亮色主题**：支持主题切换
 
@@ -68,7 +68,8 @@ POST   /api/cards          # 上传
 GET    /api/cards/:id      # 详情
 PUT    /api/cards/:id      # 更新
 DELETE /api/cards/:id      # 删除
-GET    /api/cards/:id/download  # 下载
+GET    /api/cards/:id/download  # 下载原始文件
+GET    /api/cards/:id/thumb     # 缩略图
 ```
 
 ### 聊天记录
@@ -86,14 +87,15 @@ GET    /api/chats/:id/export    # 导出
 
 ```
 GET    /api/tags           # 列表
-PUT    /api/tags           # 删除标签
+PUT    /api/tags           # 标签管理（body: { action: "add" | "rename" | "delete", tag, newTag? }）
 ```
 
-### 导出
+### 导出 / 导入
 
 ```
-POST   /api/export/batch   # 批量导出
+POST   /api/export/batch   # 批量导出（body: { cardIds: [...] }）
 POST   /api/export/all     # 全量备份
+POST   /api/import         # 从备份恢复（接受全量备份 / 批量导出格式）
 ```
 
 ## 项目结构
@@ -121,10 +123,12 @@ character-card-vault/
 │       │       ├── messages.js        # 更新消息
 │       │       └── export.js          # 导出
 │       ├── tags/
-│       │   └── index.js               # 标签管理
-│       └── export/
-│           ├── batch.js               # 批量导出
-│           └── all.js                 # 全量备份
+│       │   └── index.js               # 标签列表 / 新建 / 重命名 / 删除
+│       ├── export/
+│       │   ├── batch.js               # 批量导出
+│       │   └── all.js                 # 全量备份
+│       └── import/
+│           └── index.js               # 备份恢复
 ├── public/
 │   └── index.html                     # 前端单页应用
 ├── DEPLOY.md                          # 部署指南

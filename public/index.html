@@ -733,6 +733,95 @@
             margin-bottom: 4px;
         }
 
+        /* 聊天记录列表项 */
+        .chat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .chat-item-info {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .chat-item-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .chat-item-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .chat-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-item-actions .btn {
+            width: auto;
+            padding: 6px 14px;
+            font-size: 13px;
+        }
+
+        /* 批量操作栏 */
+        .batch-bar {
+            display: none;
+            max-width: 1400px;
+            margin: 0 auto 16px;
+            padding: 12px 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--accent-glow);
+            border-radius: 12px;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .batch-bar.active {
+            display: flex;
+        }
+
+        .batch-bar .btn,
+        .navbar-actions .btn,
+        .detail-actions .btn {
+            width: auto;
+        }
+
+        /* 搜索清除按钮 */
+        .search-clear {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px;
+            display: none;
+            line-height: 1;
+        }
+
+        .search-clear:hover {
+            color: var(--accent);
+        }
+
+        .search-clear.visible {
+            display: block;
+        }
+
         /* 响应式 */
         @media (max-width: 768px) {
             .navbar-content {
@@ -849,11 +938,14 @@
                 <div class="search-container">
                     <span class="search-icon">🔍</span>
                     <input type="text" class="search-input" id="searchInput" placeholder="搜索角色卡...">
+                    <button class="search-clear" id="searchClear" title="清空搜索">×</button>
                 </div>
                 <div class="navbar-actions">
                     <button class="btn btn-secondary" id="importBtn">导入</button>
+                    <button class="btn btn-secondary" id="importBackupBtn">恢复备份</button>
                     <button class="btn btn-secondary" id="exportAllBtn">全量备份</button>
                     <button class="view-btn" id="themeToggle">🌙</button>
+                    <input type="file" id="backupFileInput" accept=".json" style="display: none;">
                 </div>
             </div>
         </nav>
@@ -876,6 +968,7 @@
                 <label style="display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 14px;">
                     <input type="checkbox" id="chatFilter"> 有聊天记录
                 </label>
+                <button class="btn btn-secondary" id="batchModeBtn" style="width: auto; padding: 8px 16px;">多选</button>
             </div>
             <div class="toolbar-right">
                 <span id="cardCount" style="color: var(--text-secondary); font-size: 14px;">共 0 张角色卡</span>
@@ -884,6 +977,18 @@
 
         <!-- 标签云 -->
         <div class="tags-cloud" id="tagsCloud"></div>
+
+        <!-- 批量操作栏 -->
+        <div class="batch-bar" id="batchBar">
+            <span id="batchCount" style="color: var(--text-secondary); font-size: 14px;">已选 0 张</span>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-secondary" id="batchSelectAll">全选本页</button>
+                <button class="btn btn-secondary" id="batchFavorite">批量收藏</button>
+                <button class="btn btn-secondary" id="batchExport">批量导出</button>
+                <button class="btn btn-secondary" id="batchDelete">批量删除</button>
+                <button class="btn btn-secondary" id="batchExit">退出多选</button>
+            </div>
+        </div>
 
         <!-- 卡片容器 -->
         <div class="cards-container">
@@ -921,6 +1026,17 @@
         </div>
     </div>
 
+    <!-- 聊天记录模态框 -->
+    <div class="modal" id="chatModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <h2 class="modal-title" id="chatModalTitle">聊天记录</h2>
+            <div class="chat-messages" id="chatMessages" style="max-height: 60vh; padding-right: 8px;"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="chatModalClose">关闭</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 应用状态
         const state = {
@@ -934,11 +1050,33 @@
             selectedTag: null,
             sortBy: 'new',
             favoritesOnly: false,
-            hasChatOnly: false
+            hasChatOnly: false,
+            selectMode: false,
+            selectedIds: new Set(),
+            tagManage: false
         };
 
         // API 基础 URL
         const API_BASE = '/api';
+
+        // 从 URL 恢复筛选状态（刷新/分享链接保留）
+        (function restoreFiltersFromUrl() {
+            const params = new URLSearchParams(location.search);
+            if (params.get('q')) {
+                state.searchQuery = params.get('q');
+                document.getElementById('searchInput').value = state.searchQuery;
+                document.getElementById('searchClear').classList.add('visible');
+            }
+            if (params.get('tag')) state.selectedTag = params.get('tag');
+            if (params.get('favorite') === 'true') {
+                state.favoritesOnly = true;
+                document.getElementById('favoriteFilter').checked = true;
+            }
+            if (params.get('hasChat') === 'true') {
+                state.hasChatOnly = true;
+                document.getElementById('chatFilter').checked = true;
+            }
+        })();
 
         // 工具函数
         async function api(endpoint, options = {}) {
@@ -961,6 +1099,45 @@
             }
             
             return data;
+        }
+
+        // HTML 转义
+        function esc(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        // 文件大小格式化
+        function formatSize(bytes) {
+            if (!bytes) return '';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+        }
+
+        // 带认证的文件下载（img/window.open 无法携带 Authorization）
+        async function authDownload(url, fallbackName) {
+            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${state.token}` } });
+            if (!res.ok) throw new Error('下载失败');
+            const blob = await res.blob();
+            const m = (res.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/);
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = m ? decodeURIComponent(m[1]) : fallbackName;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
+        // 加载需要认证的缩略图
+        async function loadThumbs(cards) {
+            for (const card of cards) {
+                if (!card.thumbUrl) continue;
+                try {
+                    const res = await fetch(card.thumbUrl, { headers: { 'Authorization': `Bearer ${state.token}` } });
+                    if (!res.ok) continue;
+                    const img = document.querySelector(`img[data-card-id="${card.id}"]`);
+                    if (img) img.src = URL.createObjectURL(await res.blob());
+                } catch (e) { /* 保持占位图 */ }
+            }
         }
 
         // 登录
@@ -1004,6 +1181,10 @@
                 if (state.favoritesOnly) params.append('favorite', 'true');
                 if (state.hasChatOnly) params.append('hasChat', 'true');
 
+                // 同步筛选状态到 URL（刷新/分享保留）
+                const qs = params.toString();
+                history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
+
                 const data = await api(`/cards?${params}`);
                 
                 state.cards = data.data;
@@ -1021,18 +1202,19 @@
         // 渲染角色卡
         function renderCards() {
             const container = document.getElementById('cardsContainer');
-            
+
             if (state.viewMode === 'grid') {
                 container.className = 'cards-grid';
                 container.innerHTML = state.cards.map((card, index) => `
                     <div class="card animate-in stagger-${(index % 4) + 1}" data-id="${card.id}">
-                        <img class="card-image" src="${card.thumbUrl || '/placeholder.png'}" alt="${card.name}" loading="lazy">
+                        ${state.selectMode ? `<label style="position:absolute;top:8px;left:8px;z-index:2;background:rgba(0,0,0,0.6);border-radius:6px;padding:6px;" onclick="event.stopPropagation()"><input type="checkbox" class="card-check" data-id="${card.id}" ${state.selectedIds.has(card.id) ? 'checked' : ''}></label>` : ''}
+                        <img class="card-image" data-card-id="${card.id}" src="/placeholder.png" alt="${esc(card.name)}" loading="lazy">
                         <div class="card-content">
-                            <h3 class="card-title">${card.name}</h3>
-                            <p class="card-creator">${card.creator || '未知作者'}</p>
+                            <h3 class="card-title">${esc(card.name)}</h3>
+                            <p class="card-creator">${esc(card.creator || '未知作者')}</p>
                             <div class="card-tags">
                                 ${(card.tags || []).slice(0, 3).map(tag => `
-                                    <span class="card-tag">${tag}</span>
+                                    <span class="card-tag">${esc(tag)}</span>
                                 `).join('')}
                             </div>
                         </div>
@@ -1042,13 +1224,14 @@
                 container.className = 'cards-list';
                 container.innerHTML = state.cards.map((card, index) => `
                     <div class="card-list-item animate-in stagger-${(index % 4) + 1}" data-id="${card.id}">
-                        <img class="card-list-image" src="${card.thumbUrl || '/placeholder.png'}" alt="${card.name}" loading="lazy">
+                        ${state.selectMode ? `<label style="display:flex;align-items:center;" onclick="event.stopPropagation()"><input type="checkbox" class="card-check" data-id="${card.id}" ${state.selectedIds.has(card.id) ? 'checked' : ''}></label>` : ''}
+                        <img class="card-list-image" data-card-id="${card.id}" src="/placeholder.png" alt="${esc(card.name)}" loading="lazy">
                         <div class="card-list-content">
-                            <h3 class="card-title">${card.name}</h3>
-                            <p class="card-creator">${card.creator || '未知作者'}</p>
+                            <h3 class="card-title">${esc(card.name)}</h3>
+                            <p class="card-creator">${esc(card.creator || '未知作者')}</p>
                             <div class="card-tags">
                                 ${(card.tags || []).slice(0, 5).map(tag => `
-                                    <span class="card-tag">${tag}</span>
+                                    <span class="card-tag">${esc(tag)}</span>
                                 `).join('')}
                             </div>
                         </div>
@@ -1056,10 +1239,45 @@
                 `).join('');
             }
 
-            // 绑定点击事件
-            container.querySelectorAll('[data-id]').forEach(el => {
-                el.addEventListener('click', () => showDetail(el.dataset.id));
-            });
+            if (state.selectMode) {
+                // 多选模式：点击卡片切换选中
+                container.querySelectorAll('[data-id]').forEach(el => {
+                    el.addEventListener('click', (e) => {
+                        if (e.target.closest('.card-check')) return;
+                        toggleSelect(el.dataset.id);
+                    });
+                });
+                container.querySelectorAll('.card-check').forEach(cb => {
+                    cb.addEventListener('change', () => toggleSelect(cb.dataset.id));
+                });
+            } else {
+                // 绑定点击事件
+                container.querySelectorAll('[data-id]').forEach(el => {
+                    el.addEventListener('click', () => showDetail(el.dataset.id));
+                });
+            }
+
+            loadThumbs(state.cards);
+        }
+
+        // 多选切换
+        function toggleSelect(id) {
+            if (state.selectedIds.has(id)) {
+                state.selectedIds.delete(id);
+            } else {
+                state.selectedIds.add(id);
+            }
+            document.getElementById('batchCount').textContent = `已选 ${state.selectedIds.size} 张`;
+            renderCards();
+        }
+
+        // 批量模式
+        function toggleBatchMode(on) {
+            state.selectMode = on;
+            if (!on) state.selectedIds.clear();
+            document.getElementById('batchBar').classList.toggle('active', on);
+            document.getElementById('batchCount').textContent = `已选 ${state.selectedIds.size} 张`;
+            renderCards();
         }
 
         // 渲染分页
@@ -1111,16 +1329,62 @@
         function renderTags() {
             const container = document.getElementById('tagsCloud');
             container.innerHTML = state.tags.map(tag => `
-                <span class="tag ${state.selectedTag === tag ? 'active' : ''}" data-tag="${tag}">${tag}</span>
-            `).join('');
-            
-            container.querySelectorAll('.tag').forEach(el => {
+                <span class="tag ${!state.tagManage && state.selectedTag === tag ? 'active' : ''}" data-tag="${esc(tag)}">${esc(tag)}</span>
+            `).join('') + (state.tagManage ? `
+                <span class="tag" id="tagAddBtn" style="border-style: dashed;">+ 新标签</span>
+                <span class="tag" id="tagManageExit">完成</span>
+            ` : '') + (state.tags.length && !state.tagManage ? `<span class="tag" id="tagManageBtn" style="border-style: dashed;">管理标签</span>` : '');
+
+            container.querySelectorAll('.tag[data-tag]').forEach(el => {
                 el.addEventListener('click', () => {
-                    state.selectedTag = state.selectedTag === el.dataset.tag ? null : el.dataset.tag;
-                    renderTags();
-                    loadCards();
+                    const tag = el.dataset.tag;
+                    if (state.tagManage) {
+                        manageTag(tag);
+                    } else {
+                        state.selectedTag = state.selectedTag === tag ? null : tag;
+                        renderTags();
+                        loadCards();
+                    }
                 });
             });
+
+            const addBtn = document.getElementById('tagAddBtn');
+            if (addBtn) addBtn.addEventListener('click', addTag);
+            const exitBtn = document.getElementById('tagManageExit');
+            if (exitBtn) exitBtn.addEventListener('click', () => { state.tagManage = false; renderTags(); });
+            const manageBtn = document.getElementById('tagManageBtn');
+            if (manageBtn) manageBtn.addEventListener('click', () => { state.tagManage = true; renderTags(); });
+        }
+
+        // 标签管理：重命名或删除
+        async function manageTag(tag) {
+            const newTag = prompt(`重命名标签「${tag}」（留空则删除该标签）：`, tag);
+            if (newTag === null) return;
+
+            try {
+                if (newTag.trim() === '') {
+                    if (!confirm(`确定要删除标签「${tag}」吗？将从所有角色卡上移除。`)) return;
+                    await api('/tags', { method: 'PUT', body: { action: 'delete', tag } });
+                } else if (newTag !== tag) {
+                    await api('/tags', { method: 'PUT', body: { action: 'rename', tag, newTag: newTag.trim() } });
+                    if (state.selectedTag === tag) state.selectedTag = newTag.trim();
+                }
+                loadTags();
+            } catch (error) {
+                alert('操作失败: ' + error.message);
+            }
+        }
+
+        // 新增标签
+        async function addTag() {
+            const tag = prompt('输入新标签名称：');
+            if (!tag || !tag.trim()) return;
+            try {
+                await api('/tags', { method: 'PUT', body: { action: 'add', tag: tag.trim() } });
+                loadTags();
+            } catch (error) {
+                alert('添加失败: ' + error.message);
+            }
         }
 
         // 显示详情
@@ -1131,13 +1395,13 @@
                 
                 document.getElementById('detailContent').innerHTML = `
                     <div class="detail-header">
-                        <img class="detail-image" src="${card.thumbUrl || '/placeholder.png'}" alt="${card.name}">
+                        <img class="detail-image" data-card-id="${card.id}" src="/placeholder.png" alt="${esc(card.name)}">
                         <div class="detail-info">
-                            <h1 class="detail-title">${card.name}</h1>
-                            <p class="detail-creator">作者：${card.creator || '未知'}</p>
+                            <h1 class="detail-title">${esc(card.name)}</h1>
+                            <p class="detail-creator">作者：${esc(card.creator || '未知')}</p>
                             <div class="card-tags" style="margin-bottom: 16px;">
                                 ${(card.tags || []).map(tag => `
-                                    <span class="card-tag">${tag}</span>
+                                    <span class="card-tag">${esc(tag)}</span>
                                 `).join('')}
                             </div>
                             <div class="detail-actions">
@@ -1149,58 +1413,69 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     ${card.description ? `
                         <div class="detail-section">
                             <h3 class="detail-section-title">描述</h3>
-                            <div class="detail-section-content">${card.description}</div>
+                            <div class="detail-section-content">${esc(card.description)}</div>
                         </div>
                     ` : ''}
-                    
+
                     ${card.personality ? `
                         <div class="detail-section">
                             <h3 class="detail-section-title">性格</h3>
-                            <div class="detail-section-content">${card.personality}</div>
+                            <div class="detail-section-content">${esc(card.personality)}</div>
                         </div>
                     ` : ''}
-                    
+
                     ${card.scenario ? `
                         <div class="detail-section">
                             <h3 class="detail-section-title">场景</h3>
-                            <div class="detail-section-content">${card.scenario}</div>
+                            <div class="detail-section-content">${esc(card.scenario)}</div>
                         </div>
                     ` : ''}
-                    
+
                     ${card.first_mes ? `
                         <div class="detail-section">
                             <h3 class="detail-section-title">开场白</h3>
-                            <div class="detail-section-content">${card.first_mes}</div>
+                            <div class="detail-section-content">${esc(card.first_mes)}</div>
                         </div>
                     ` : ''}
-                    
+
                     ${card.mes_example ? `
                         <div class="detail-section">
                             <h3 class="detail-section-title">对话示例</h3>
-                            <div class="detail-section-content">${card.mes_example}</div>
+                            <div class="detail-section-content">${esc(card.mes_example)}</div>
                         </div>
                     ` : ''}
-                    
+
                     ${card.system_prompt ? `
                         <div class="detail-section">
                             <h3 class="detail-section-title">系统提示词</h3>
-                            <div class="detail-section-content">${card.system_prompt}</div>
+                            <div class="detail-section-content">${esc(card.system_prompt)}</div>
                         </div>
                     ` : ''}
-                    
+
                     ${card.world ? `
                         <div class="detail-section">
                             <h3 class="detail-section-title">世界书</h3>
-                            <div class="detail-section-content">${typeof card.world === 'string' ? card.world : JSON.stringify(card.world, null, 2)}</div>
+                            <div class="detail-section-content">${esc(typeof card.world === 'string' ? card.world : JSON.stringify(card.world, null, 2))}</div>
                         </div>
                     ` : ''}
+
+                    <div class="chat-container" id="chatSection">
+                        <div class="chat-header">
+                            <h3 class="detail-section-title" style="margin-bottom: 0;">聊天记录</h3>
+                            <input type="file" id="chatFileInput" accept=".json,.jsonl" style="display: none;" onchange="uploadChat(event, '${card.id}')">
+                            <button class="btn btn-secondary" onclick="document.getElementById('chatFileInput').click()">导入聊天记录</button>
+                        </div>
+                        <div id="chatList"><p style="color: var(--text-secondary); font-size: 14px;">加载中...</p></div>
+                    </div>
                 `;
-                
+
                 document.getElementById('detailPage').classList.add('active');
+                loadThumbs([card]);
+                loadCardChats(card.id);
             } catch (error) {
                 alert('加载详情失败: ' + error.message);
             }
@@ -1220,21 +1495,182 @@
             }
         }
 
-        // 下载角色卡
+        // 下载角色卡（文件名优先取服务端 Content-Disposition）
         function downloadCard(id) {
-            window.open(`${API_BASE}/cards/${id}/download`, '_blank');
+            authDownload(`${API_BASE}/cards/${id}/download`, `${id}.png`)
+                .catch(error => alert('下载失败: ' + error.message));
         }
 
         // 删除角色卡
         async function deleteCard(id) {
             if (!confirm('确定要删除这张角色卡吗？')) return;
-            
+
             try {
                 await api(`/cards/${id}`, { method: 'DELETE' });
                 loadCards(state.currentPage);
                 document.getElementById('detailPage').classList.remove('active');
             } catch (error) {
                 alert('删除失败: ' + error.message);
+            }
+        }
+
+        // ============ 聊天记录管理 ============
+
+        // 加载卡片关联的聊天记录列表
+        async function loadCardChats(cardId) {
+            const list = document.getElementById('chatList');
+            if (!list) return;
+            try {
+                const data = await api(`/chats?cardId=${encodeURIComponent(cardId)}`);
+                if (!data.data.length) {
+                    list.innerHTML = '<p style="color: var(--text-secondary); font-size: 14px;">暂无聊天记录</p>';
+                    return;
+                }
+                list.innerHTML = data.data.map(chat => `
+                    <div class="chat-item">
+                        <div class="chat-item-info">
+                            <div class="chat-item-title">${esc(chat.title || '未命名对话')}</div>
+                            <div class="chat-item-meta">${chat.msgCount || 0} 条消息${chat.fileSize ? ' · ' + formatSize(chat.fileSize) : ''} · ${new Date(chat.importedAt).toLocaleString()}</div>
+                        </div>
+                        <div class="chat-item-actions">
+                            <button class="btn btn-secondary" onclick="viewChat('${chat.id}')">查看</button>
+                            <button class="btn btn-secondary" onclick="exportChat('${chat.id}')">导出</button>
+                            <button class="btn btn-secondary" onclick="deleteChat('${cardId}', '${chat.id}')">删除</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                list.innerHTML = `<p style="color: var(--text-secondary); font-size: 14px;">加载失败: ${esc(error.message)}</p>`;
+            }
+        }
+
+        // 查看聊天记录
+        async function viewChat(chatId) {
+            try {
+                const data = await api(`/chats/${encodeURIComponent(chatId)}`);
+                const chat = data.data;
+                document.getElementById('chatModalTitle').textContent = chat.title || '聊天记录';
+                const box = document.getElementById('chatMessages');
+                const messages = chat.messages || [];
+                box.innerHTML = messages.length ? messages.map(m => `
+                    <div class="message ${m.role === 'user' ? 'user' : 'assistant'}">
+                        <div class="message-role">${esc(m.name || m.role || 'unknown')}</div>
+                        ${esc(typeof m.content === 'string' ? m.content : JSON.stringify(m.content))}
+                    </div>
+                `).join('') : '<p style="color: var(--text-secondary); font-size: 14px;">无消息内容</p>';
+                box.scrollTop = 0;
+                document.getElementById('chatModal').classList.add('active');
+            } catch (error) {
+                alert('加载聊天记录失败: ' + error.message);
+            }
+        }
+
+        // 删除聊天记录
+        async function deleteChat(cardId, chatId) {
+            if (!confirm('确定要删除这条聊天记录吗？')) return;
+            try {
+                await api(`/chats/${encodeURIComponent(chatId)}`, { method: 'DELETE' });
+                loadCardChats(cardId);
+            } catch (error) {
+                alert('删除失败: ' + error.message);
+            }
+        }
+
+        // 导出聊天记录
+        function exportChat(chatId) {
+            authDownload(`${API_BASE}/chats/${encodeURIComponent(chatId)}/export`, `${chatId}.jsonl`)
+                .catch(error => alert('导出失败: ' + error.message));
+        }
+
+        // 导入聊天记录
+        async function uploadChat(event, cardId) {
+            const file = event.target.files[0];
+            if (!file) return;
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('cardId', cardId);
+                await api('/chats', { method: 'POST', body: formData });
+                loadCardChats(cardId);
+            } catch (error) {
+                alert('导入聊天记录失败: ' + error.message);
+            }
+            event.target.value = '';
+        }
+
+        // ============ 批量操作 ============
+
+        async function batchFavorite() {
+            const ids = [...state.selectedIds];
+            if (!ids.length) return alert('请先选择角色卡');
+            if (!confirm(`确定要收藏选中的 ${ids.length} 张角色卡吗？`)) return;
+            for (const id of ids) {
+                try {
+                    await api(`/cards/${id}`, { method: 'PUT', body: { favorited: true } });
+                } catch (error) {
+                    console.error(`收藏失败 ${id}:`, error);
+                }
+            }
+            alert('批量收藏完成');
+            toggleBatchMode(false);
+            loadCards(state.currentPage);
+        }
+
+        async function batchDelete() {
+            const ids = [...state.selectedIds];
+            if (!ids.length) return alert('请先选择角色卡');
+            if (!confirm(`确定要删除选中的 ${ids.length} 张角色卡吗？此操作不可恢复！`)) return;
+            let ok = 0;
+            for (const id of ids) {
+                try {
+                    await api(`/cards/${id}`, { method: 'DELETE' });
+                    ok++;
+                } catch (error) {
+                    console.error(`删除失败 ${id}:`, error);
+                }
+            }
+            alert(`删除完成: ${ok}/${ids.length}`);
+            toggleBatchMode(false);
+            loadCards();
+        }
+
+        async function batchExport() {
+            const ids = [...state.selectedIds];
+            if (!ids.length) return alert('请先选择角色卡');
+            try {
+                const data = await api('/export/batch', {
+                    method: 'POST',
+                    body: { cardIds: ids }
+                });
+                const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `character-cards-batch-${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                alert('批量导出失败: ' + error.message);
+            }
+        }
+
+        // ============ 备份恢复 ============
+
+        async function restoreBackup(file) {
+            if (!file) return;
+            if (!confirm(`确定要从 "${file.name}" 恢复备份吗？已存在的内容会被跳过。`)) return;
+            try {
+                const text = await file.text();
+                const data = await api('/import', {
+                    method: 'POST',
+                    body: JSON.parse(text)
+                });
+                const r = data.data;
+                alert(`恢复完成：导入 ${r.importedCards} 张角色卡（跳过 ${r.skippedCards} 张），导入 ${r.importedChats} 条聊天记录（跳过 ${r.skippedChats} 条）`);
+                loadCards();
+                loadTags();
+            } catch (error) {
+                alert('恢复备份失败: ' + error.message);
             }
         }
 
@@ -1282,6 +1718,46 @@
             const isLight = document.body.classList.contains('light-theme');
             document.getElementById('themeToggle').textContent = isLight ? '☀️' : '🌙';
             localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        });
+
+        // 多选模式
+        document.getElementById('batchModeBtn').addEventListener('click', () => toggleBatchMode(!state.selectMode));
+        document.getElementById('batchExit').addEventListener('click', () => toggleBatchMode(false));
+        document.getElementById('batchSelectAll').addEventListener('click', () => {
+            state.cards.forEach(c => state.selectedIds.add(c.id));
+            document.getElementById('batchCount').textContent = `已选 ${state.selectedIds.size} 张`;
+            renderCards();
+        });
+        document.getElementById('batchFavorite').addEventListener('click', batchFavorite);
+        document.getElementById('batchDelete').addEventListener('click', batchDelete);
+        document.getElementById('batchExport').addEventListener('click', batchExport);
+
+        // 聊天记录模态框关闭
+        document.getElementById('chatModalClose').addEventListener('click', () => {
+            document.getElementById('chatModal').classList.remove('active');
+        });
+
+        // 搜索清除
+        const searchInput = document.getElementById('searchInput');
+        const searchClear = document.getElementById('searchClear');
+        searchInput.addEventListener('input', () => {
+            searchClear.classList.toggle('visible', searchInput.value.length > 0);
+        });
+        searchClear.addEventListener('click', () => {
+            searchInput.value = '';
+            searchClear.classList.remove('visible');
+            state.searchQuery = '';
+            loadCards();
+            searchInput.focus();
+        });
+
+        // 恢复备份
+        document.getElementById('importBackupBtn').addEventListener('click', () => {
+            document.getElementById('backupFileInput').click();
+        });
+        document.getElementById('backupFileInput').addEventListener('change', (e) => {
+            restoreBackup(e.target.files[0]);
+            e.target.value = '';
         });
 
         // 关闭详情页
@@ -1348,20 +1824,30 @@
             let uploaded = 0;
             
             for (const file of selectedFiles) {
-                try {
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    
-                    await api('/cards', {
-                        method: 'POST',
-                        body: formData,
-                        headers: {} // 让浏览器自动设置 Content-Type
-                    });
-                    
+                const formData = new FormData();
+                formData.append('file', file);
+
+                // 上传失败自动重试一次
+                let lastError = null;
+                for (let attempt = 0; attempt < 2; attempt++) {
+                    try {
+                        await api('/cards', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        lastError = null;
+                        break;
+                    } catch (error) {
+                        lastError = error;
+                        console.error('上传失败（第 ' + (attempt + 1) + ' 次）:', error);
+                    }
+                }
+
+                if (!lastError) {
                     uploaded++;
                     progressFill.style.width = `${(uploaded / selectedFiles.length) * 100}%`;
-                } catch (error) {
-                    console.error('上传失败:', error);
+                } else {
+                    alert(`上传失败: ${file.name} - ${lastError.message}`);
                 }
             }
             

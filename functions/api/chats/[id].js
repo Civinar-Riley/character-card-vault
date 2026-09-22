@@ -2,7 +2,7 @@
 // PUT /api/chats/:id - 更新聊天记录
 // DELETE /api/chats/:id - 删除聊天记录
 
-import { downloadFromTelegram, uploadToTelegram } from '../../utils/telegram.js';
+import { downloadFromTelegram, uploadToTelegram, deleteTelegramMessage } from '../../utils/telegram.js';
 
 export async function onRequestGet(context) {
     try {
