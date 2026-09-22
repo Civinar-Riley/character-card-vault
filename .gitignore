@@ -33,6 +33,3 @@ build/
 
 # 开发工具配置
 opencode.json
-
-# 部署文档
-DEPLOY.md
