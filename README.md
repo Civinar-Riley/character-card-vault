@@ -17,24 +17,37 @@
 
 - **前端**：原生 HTML/CSS/JavaScript (SPA)
 - **后端**：Cloudflare Pages Functions
-- **存储**：Cloudflare R2 (文件) + KV (元数据)
+- **存储**：Telegram Bot API (文件) + Cloudflare KV (元数据)
 - **认证**：环境变量密码认证
 
 ## 部署步骤
 
+### 准备工作
+
+1. 注册 [Cloudflare](https://dash.cloudflare.com) 账号
+2. 创建 Telegram Bot（通过 @BotFather）
+3. 创建 Telegram 频道并将 Bot 设为管理员
+
+### 部署到 Cloudflare Pages
+
 1. Fork 本仓库到 GitHub
-2. 在 Cloudflare Dashboard 创建 R2 存储桶（名称：`character-cards`）
-3. 在 Cloudflare Dashboard 创建 KV 命名空间
-4. 连接 GitHub 仓库到 Cloudflare Pages
-5. 设置环境变量：`ACCESS_PASSWORD`
-6. 绑定 R2 和 KV
-7. 部署
+2. 在 Cloudflare 控制台连接 GitHub 仓库到 Pages
+3. 设置环境变量：
+   - `ACCESS_PASSWORD`：访问密码
+   - `TG_BOT_TOKEN`：Telegram Bot Token
+   - `TG_CHAT_ID`：Telegram 频道 Chat ID
+4. 绑定 KV 命名空间
+5. 部署
+
+详细步骤请参考 `计划.md` 中的部署指南。
 
 ## 环境变量
 
-| 变量名 | 说明 |
-|--------|------|
-| `ACCESS_PASSWORD` | 访问密码 |
+| 变量名 | 说明 | 必填 |
+|--------|------|------|
+| `ACCESS_PASSWORD` | 访问密码 | 是 |
+| `TG_BOT_TOKEN` | Telegram Bot Token | 是 |
+| `TG_CHAT_ID` | Telegram 频道 Chat ID | 是 |
 
 ## 本地开发
 
@@ -100,6 +113,8 @@ character-card-vault/
 ├── wrangler.toml                      # Cloudflare 配置
 ├── functions/
 │   ├── _middleware.js                  # CORS + 认证中间件
+│   ├── utils/
+│   │   └── telegram.js                # Telegram Bot API 工具
 │   └── api/
 │       ├── auth/
 │       │   └── login.js               # 登录
