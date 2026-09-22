@@ -1306,6 +1306,10 @@
                 document.getElementById('settingBackgroundHint').style.display = 'block';
             }
             applySettings();
+            // 若详情页已先于配置打开，重渲染以显示预制按钮
+            if (document.getElementById('detailPage').classList.contains('active') && currentCard) {
+                showDetail(currentCard.id);
+            }
         })();
 
         // 工具函数
@@ -1653,7 +1657,7 @@
                         <img class="detail-image" data-card-id="${card.id}" src="${PLACEHOLDER}" alt="${esc(card.name)}" decoding="async">
                         <div class="detail-info">
                             <h1 class="detail-title">${esc(card.name)}</h1>
-                            <p class="detail-creator">作者：${esc(card.creator || '未知')}<button class="creator-edit" onclick="editCreator()" title="编辑作者">✎</button>${card.creator !== '西维纳尔' ? `<button class="creator-edit" onclick="setCreator('西维纳尔')" title="一键设为西维纳尔">西维纳尔</button>` : ''}</p>
+                            <p class="detail-creator">作者：${esc(card.creator || '未知')}<button class="creator-edit" onclick="editCreator()" title="编辑作者">✎</button>${siteConfig.presetCreator && card.creator !== siteConfig.presetCreator ? `<button class="creator-edit" onclick="setCreator(this)" data-name="${esc(siteConfig.presetCreator)}" title="一键设置作者">${esc(siteConfig.presetCreator)}</button>` : ''}</p>
                             <div class="card-tags" style="margin-bottom: 16px;">
                                 ${(card.tags || []).map(tag => `
                                     <span class="card-tag">${esc(tag)}</span>
@@ -1661,7 +1665,7 @@
                                 ${(card.userTags || []).map((tag, i) => `
                                     <span class="card-tag card-tag-user">${esc(tag)}<button class="tag-remove" onclick="removeUserTag(${i})" title="移除该标签">×</button></span>
                                 `).join('')}
-                                ${!(card.userTags || []).includes('已发布') ? `<button class="creator-edit" onclick="addUserTag('已发布')" title="一键添加标签">已发布</button>` : ''}
+                                ${presetTagButtons(card)}
                                 <button class="creator-edit" onclick="editUserTags()" title="编辑自定义标签">＋标签</button>
                             </div>
                             <div class="detail-actions">
@@ -1755,9 +1759,20 @@
             }
         });
 
+        // 预制标签按钮（来自环境变量 PRESET_TAGS，逗号分隔，已存在的不再显示）
+        function presetTagButtons(card) {
+            const existing = new Set(card.userTags || []);
+            return (siteConfig.presetTags || '')
+                .split(/[,，]/).map(t => t.trim()).filter(Boolean)
+                .filter(t => !existing.has(t))
+                .map(p => `<button class="creator-edit" onclick="addUserTag(this)" data-tag="${esc(p)}" title="一键添加标签">${esc(p)}</button>`)
+                .join('');
+        }
+
         // 一键设置预制作者
-        async function setCreator(name) {
-            if (!currentCard) return;
+        async function setCreator(btn) {
+            const name = btn ? (btn.getAttribute('data-name') || '') : '';
+            if (!currentCard || !name) return;
             try {
                 await api(`/cards/${currentCard.id}`, {
                     method: 'PUT',
@@ -1770,9 +1785,10 @@
             }
         }
 
-        // 添加单个自定义标签（预制"已发布"等）
-        async function addUserTag(tag) {
-            if (!currentCard) return;
+        // 添加单个自定义标签（预制标签等）
+        async function addUserTag(btn) {
+            const tag = btn ? (btn.getAttribute('data-tag') || '') : '';
+            if (!currentCard || !tag) return;
             const userTags = [...new Set([...(currentCard.userTags || []), tag])];
             try {
                 await api(`/cards/${currentCard.id}`, {
