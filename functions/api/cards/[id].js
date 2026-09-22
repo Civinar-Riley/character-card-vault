@@ -50,6 +50,7 @@ export async function onRequestPut(context) {
         const body = await context.request.json();
         
         if (body.creator !== undefined) card.creator = body.creator;
+        if (body.description !== undefined) card.description = body.description;
         if (body.tags !== undefined) card.tags = body.tags;
         if (body.userTags !== undefined) card.userTags = body.userTags;
         if (body.favorited !== undefined) card.favorited = body.favorited;

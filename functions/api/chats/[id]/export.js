@@ -48,10 +48,14 @@ export async function onRequestGet(context) {
             });
         }
 
+        // HTTP 头不支持非 ASCII：中文标题需用 RFC 5987 filename* 传递，否则乱码
+        const rawName = `${chatIndex.title || 'chat'}.jsonl`;
+        const asciiFallback = rawName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, "'");
+
         return new Response(response.body, {
             headers: {
                 'Content-Type': 'application/jsonl',
-                'Content-Disposition': `attachment; filename="${chatIndex.title || 'chat'}.jsonl"`
+                'Content-Disposition': `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(rawName)}`
             }
         });
     } catch (error) {
