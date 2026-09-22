@@ -27,3 +27,6 @@ build/
 .env
 .env.local
 .env.*.local
+
+# 开发文档
+计划.md
