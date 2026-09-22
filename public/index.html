@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>角色卡仓库</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* 深空黑底 + 琥珀金 */
+            --bg-deep: #0a0c10;
+            --bg-surface: #12151c;
+            --bg-card: rgba(18, 21, 28, 0.8);
+            --accent: #d4a853;
+            --accent-glow: rgba(212, 168, 83, 0.3);
+            --text-primary: #e8e6e3;
+            --text-secondary: #8a8f98;
+            --border: rgba(255, 255, 255, 0.06);
+            --glass: rgba(255, 255, 255, 0.03);
+            
+            /* 亮色主题 */
+            --bg-deep-light: #f5f3f0;
+            --bg-surface-light: #ffffff;
+            --accent-light: #b8860b;
+            
+            /* 动画变量 */
+            --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 背景动画 */
+        .bg-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: 
+                radial-gradient(ellipse at 20% 80%, rgba(212, 168, 83, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(100, 100, 120, 0.1) 0%, transparent 50%),
+                linear-gradient(135deg, var(--bg-deep) 0%, #0d1117 100%);
+        }
+
+        /* 噪点纹理 */
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        }
+
+        /* 登录页 */
+        .login-page {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+        }
+
+        .login-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 28px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--accent) 0%, #f4d03f 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .login-subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            font-size: 14px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 16px;
+            transition: var(--transition-fast);
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px 24px;
+            background: linear-gradient(135deg, var(--accent) 0%, #c9952a 100%);
+            border: none;
+            border-radius: 8px;
+            color: #0a0c10;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-fast);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -10px var(--accent-glow);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* 主应用布局 */
+        .app {
+            display: none;
+            min-height: 100vh;
+        }
+
+        .app.active {
+            display: block;
+        }
+
+        /* 导航栏 */
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 12, 16, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+        }
+
+        .navbar-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar-brand {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--accent) 0%, #f4d03f 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .navbar-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .search-container {
+            position: relative;
+            flex: 1;
+            max-width: 400px;
+            margin: 0 24px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 16px 10px 40px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: var(--transition-fast);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        /* 工具栏 */
+        .toolbar {
+            max-width: 1400px;
+            margin: 24px auto;
+            padding: 0 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .toolbar-left {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .toolbar-right {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .view-toggle {
+            display: flex;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        .view-btn {
+            padding: 8px 12px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 6px;
+            transition: var(--transition-fast);
+        }
+
+        .view-btn.active {
+            background: var(--accent);
+            color: #0a0c10;
+        }
+
+        /* 标签云 */
+        .tags-cloud {
+            max-width: 1400px;
+            margin: 0 auto 24px;
+            padding: 0 24px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition-fast);
+        }
+
+        .tag:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .tag.active {
+            background: var(--accent);
+            color: #0a0c10;
+            border-color: var(--accent);
+        }
+
+        /* 卡片网格 */
+        .cards-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 24px 24px;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        .cards-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* 角色卡卡片 */
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: var(--transition-normal);
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            border-color: var(--accent);
+            box-shadow: 
+                0 20px 40px -20px rgba(212, 168, 83, 0.2),
+                0 0 0 1px var(--accent-glow) inset;
+        }
+
+        .card-image {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            background: var(--bg-surface);
+        }
+
+        .card-content {
+            padding: 16px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+
+        .card-creator {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .card-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .card-tag {
+            padding: 4px 8px;
+            background: rgba(212, 168, 83, 0.1);
+            border-radius: 4px;
+            font-size: 11px;
+            color: var(--accent);
+        }
+
+        /* 列表视图卡片 */
+        .card-list-item {
+            display: flex;
+            gap: 16px;
+            padding: 16px;
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: var(--transition-normal);
+        }
+
+        .card-list-item:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .card-list-image {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            background: var(--bg-surface);
+        }
+
+        .card-list-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* 详情页 */
+        .detail-page {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 12, 16, 0.9);
+            backdrop-filter: blur(20px);
+            z-index: 200;
+            transform: translateX(100%);
+            transition: var(--transition-slow);
+            overflow-y: auto;
+        }
+
+        .detail-page.active {
+            transform: translateX(0);
+        }
+
+        .detail-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        .detail-close {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            color: var(--text-primary);
+            font-size: 20px;
+            cursor: pointer;
+            transition: var(--transition-fast);
+        }
+
+        .detail-close:hover {
+            background: var(--accent);
+            color: #0a0c10;
+        }
+
+        .detail-header {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .detail-image {
+            width: 200px;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+        }
+
+        .detail-info {
+            flex: 1;
+        }
+
+        .detail-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--accent) 0%, #f4d03f 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .detail-creator {
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .detail-section {
+            margin-bottom: 24px;
+        }
+
+        .detail-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .detail-section-content {
+            color: var(--text-primary);
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .detail-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        /* 加载更多 */
+        .load-more {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 分页 */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 24px;
+        }
+
+        .page-btn {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition-fast);
+        }
+
+        .page-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .page-btn.active {
+            background: var(--accent);
+            color: #0a0c10;
+            border-color: var(--accent);
+        }
+
+        /* 上传区域 */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            transition: var(--transition-fast);
+            cursor: pointer;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(212, 168, 83, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: var(--text-secondary);
+        }
+
+        .upload-text {
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .upload-hint {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* 进度条 */
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 16px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            transition: var(--transition-fast);
+        }
+
+        /* 模态框 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 300;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition-fast);
+        }
+
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            transform: scale(0.9);
+            transition: var(--transition-fast);
+        }
+
+        .modal.active .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        /* 聊天记录 */
+        .chat-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 24px;
+        }
+
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .chat-messages {
+            max-height: 400px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: var(--accent);
+            color: #0a0c10;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .message-role {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .navbar-content {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+
+            .search-container {
+                order: 3;
+                max-width: 100%;
+                margin: 0;
+                width: 100%;
+            }
+
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .toolbar-left,
+            .toolbar-right {
+                justify-content: center;
+            }
+
+            .detail-header {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+
+            .detail-image {
+                width: 150px;
+                height: 150px;
+            }
+
+            .cards-grid {
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            }
+        }
+
+        /* 动画 */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeInUp 0.5s ease forwards;
+        }
+
+        .stagger-1 { animation-delay: 0.1s; }
+        .stagger-2 { animation-delay: 0.2s; }
+        .stagger-3 { animation-delay: 0.3s; }
+        .stagger-4 { animation-delay: 0.4s; }
+
+        /* 亮色主题 */
+        body.light-theme {
+            background-color: var(--bg-deep-light);
+            color: #1a1a1a;
+        }
+
+        body.light-theme .navbar {
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        body.light-theme .card,
+        body.light-theme .card-list-item {
+            background: var(--bg-surface-light);
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-theme .detail-page {
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        body.light-theme .input-field,
+        body.light-theme .search-input {
+            background: rgba(0, 0, 0, 0.03);
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    <div class="noise-overlay"></div>
+
+    <!-- 登录页 -->
+    <div class="login-page" id="loginPage">
+        <div class="login-container animate-in">
+            <h1 class="login-title">角色卡仓库</h1>
+            <p class="login-subtitle">Character Card Vault</p>
+            <form id="loginForm">
+                <div class="input-group">
+                    <label class="input-label">访问密码</label>
+                    <input type="password" class="input-field" id="password" placeholder="请输入密码" required>
+                </div>
+                <button type="submit" class="btn">进入仓库</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 主应用 -->
+    <div class="app" id="app">
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-content">
+                <div class="navbar-brand">角色卡仓库</div>
+                <div class="search-container">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" class="search-input" id="searchInput" placeholder="搜索角色卡...">
+                </div>
+                <div class="navbar-actions">
+                    <button class="btn btn-secondary" id="importBtn">导入</button>
+                    <button class="btn btn-secondary" id="exportAllBtn">全量备份</button>
+                    <button class="view-btn" id="themeToggle">🌙</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 工具栏 -->
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <div class="view-toggle">
+                    <button class="view-btn active" data-view="grid">网格</button>
+                    <button class="view-btn" data-view="list">列表</button>
+                </div>
+                <select class="input-field" id="sortSelect" style="width: auto; padding: 8px 12px;">
+                    <option value="new">最新上传</option>
+                    <option value="old">最早上传</option>
+                    <option value="az">按名称排序</option>
+                </select>
+                <label style="display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 14px;">
+                    <input type="checkbox" id="favoriteFilter"> 仅收藏
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 14px;">
+                    <input type="checkbox" id="chatFilter"> 有聊天记录
+                </label>
+            </div>
+            <div class="toolbar-right">
+                <span id="cardCount" style="color: var(--text-secondary); font-size: 14px;">共 0 张角色卡</span>
+            </div>
+        </div>
+
+        <!-- 标签云 -->
+        <div class="tags-cloud" id="tagsCloud"></div>
+
+        <!-- 卡片容器 -->
+        <div class="cards-container">
+            <div class="cards-grid" id="cardsContainer"></div>
+            <div class="load-more" id="loadMore" style="display: none;">
+                <div class="loading-spinner"></div>
+            </div>
+            <div class="pagination" id="pagination"></div>
+        </div>
+    </div>
+
+    <!-- 详情页 -->
+    <div class="detail-page" id="detailPage">
+        <button class="detail-close" id="detailClose">×</button>
+        <div class="detail-container" id="detailContent"></div>
+    </div>
+
+    <!-- 上传模态框 -->
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <h2 class="modal-title">导入角色卡</h2>
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">📁</div>
+                <p class="upload-text">拖拽文件到此处，或点击选择</p>
+                <p class="upload-hint">支持 PNG 格式，最大 20MB</p>
+                <input type="file" id="fileInput" accept=".png,.json" multiple style="display: none;">
+            </div>
+            <div class="progress-bar" id="progressBar" style="display: none;">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="cancelUpload">取消</button>
+                <button class="btn" id="confirmUpload" disabled>确认导入</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 应用状态
+        const state = {
+            token: localStorage.getItem('token'),
+            cards: [],
+            tags: [],
+            currentPage: 1,
+            totalPages: 1,
+            viewMode: 'grid',
+            searchQuery: '',
+            selectedTag: null,
+            sortBy: 'new',
+            favoritesOnly: false,
+            hasChatOnly: false
+        };
+
+        // API 基础 URL
+        const API_BASE = '/api';
+
+        // 工具函数
+        async function api(endpoint, options = {}) {
+            const url = `${API_BASE}${endpoint}`;
+            const headers = {
+                'Authorization': `Bearer ${state.token}`,
+                ...options.headers
+            };
+
+            if (options.body && !(options.body instanceof FormData)) {
+                headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify(options.body);
+            }
+
+            const response = await fetch(url, { ...options, headers });
+            const data = await response.json();
+            
+            if (!data.ok) {
+                throw new Error(data.error || '请求失败');
+            }
+            
+            return data;
+        }
+
+        // 登录
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const password = document.getElementById('password').value;
+            
+            try {
+                const data = await api('/auth/login', {
+                    method: 'POST',
+                    body: { password }
+                });
+                
+                state.token = data.data.token;
+                localStorage.setItem('token', state.token);
+                showApp();
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+
+        // 显示应用
+        function showApp() {
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('app').classList.add('active');
+            loadCards();
+            loadTags();
+        }
+
+        // 加载角色卡
+        async function loadCards(page = 1) {
+            try {
+                const params = new URLSearchParams({
+                    page: page.toString(),
+                    limit: '30',
+                    sort: state.sortBy
+                });
+
+                if (state.searchQuery) params.append('q', state.searchQuery);
+                if (state.selectedTag) params.append('tag', state.selectedTag);
+                if (state.favoritesOnly) params.append('favorite', 'true');
+                if (state.hasChatOnly) params.append('hasChat', 'true');
+
+                const data = await api(`/cards?${params}`);
+                
+                state.cards = data.data;
+                state.currentPage = data.page;
+                state.totalPages = Math.ceil(data.total / data.limit);
+                
+                renderCards();
+                renderPagination();
+                document.getElementById('cardCount').textContent = `共 ${data.total} 张角色卡`;
+            } catch (error) {
+                console.error('加载失败:', error);
+            }
+        }
+
+        // 渲染角色卡
+        function renderCards() {
+            const container = document.getElementById('cardsContainer');
+            
+            if (state.viewMode === 'grid') {
+                container.className = 'cards-grid';
+                container.innerHTML = state.cards.map((card, index) => `
+                    <div class="card animate-in stagger-${(index % 4) + 1}" data-id="${card.id}">
+                        <img class="card-image" src="${card.thumbUrl || '/placeholder.png'}" alt="${card.name}" loading="lazy">
+                        <div class="card-content">
+                            <h3 class="card-title">${card.name}</h3>
+                            <p class="card-creator">${card.creator || '未知作者'}</p>
+                            <div class="card-tags">
+                                ${(card.tags || []).slice(0, 3).map(tag => `
+                                    <span class="card-tag">${tag}</span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.className = 'cards-list';
+                container.innerHTML = state.cards.map((card, index) => `
+                    <div class="card-list-item animate-in stagger-${(index % 4) + 1}" data-id="${card.id}">
+                        <img class="card-list-image" src="${card.thumbUrl || '/placeholder.png'}" alt="${card.name}" loading="lazy">
+                        <div class="card-list-content">
+                            <h3 class="card-title">${card.name}</h3>
+                            <p class="card-creator">${card.creator || '未知作者'}</p>
+                            <div class="card-tags">
+                                ${(card.tags || []).slice(0, 5).map(tag => `
+                                    <span class="card-tag">${tag}</span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // 绑定点击事件
+            container.querySelectorAll('[data-id]').forEach(el => {
+                el.addEventListener('click', () => showDetail(el.dataset.id));
+            });
+        }
+
+        // 渲染分页
+        function renderPagination() {
+            const container = document.getElementById('pagination');
+            
+            if (state.totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+            
+            if (state.currentPage > 1) {
+                html += `<button class="page-btn" data-page="${state.currentPage - 1}">上一页</button>`;
+            }
+            
+            for (let i = 1; i <= state.totalPages; i++) {
+                if (i === 1 || i === state.totalPages || (i >= state.currentPage - 2 && i <= state.currentPage + 2)) {
+                    html += `<button class="page-btn ${i === state.currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
+                } else if (i === state.currentPage - 3 || i === state.currentPage + 3) {
+                    html += `<button class="page-btn" disabled>...</button>`;
+                }
+            }
+            
+            if (state.currentPage < state.totalPages) {
+                html += `<button class="page-btn" data-page="${state.currentPage + 1}">下一页</button>`;
+            }
+            
+            container.innerHTML = html;
+            
+            container.querySelectorAll('.page-btn:not([disabled])').forEach(btn => {
+                btn.addEventListener('click', () => loadCards(parseInt(btn.dataset.page)));
+            });
+        }
+
+        // 加载标签
+        async function loadTags() {
+            try {
+                const data = await api('/tags');
+                state.tags = data.data;
+                renderTags();
+            } catch (error) {
+                console.error('加载标签失败:', error);
+            }
+        }
+
+        // 渲染标签
+        function renderTags() {
+            const container = document.getElementById('tagsCloud');
+            container.innerHTML = state.tags.map(tag => `
+                <span class="tag ${state.selectedTag === tag ? 'active' : ''}" data-tag="${tag}">${tag}</span>
+            `).join('');
+            
+            container.querySelectorAll('.tag').forEach(el => {
+                el.addEventListener('click', () => {
+                    state.selectedTag = state.selectedTag === el.dataset.tag ? null : el.dataset.tag;
+                    renderTags();
+                    loadCards();
+                });
+            });
+        }
+
+        // 显示详情
+        async function showDetail(id) {
+            try {
+                const data = await api(`/cards/${id}`);
+                const card = data.data;
+                
+                document.getElementById('detailContent').innerHTML = `
+                    <div class="detail-header">
+                        <img class="detail-image" src="${card.thumbUrl || '/placeholder.png'}" alt="${card.name}">
+                        <div class="detail-info">
+                            <h1 class="detail-title">${card.name}</h1>
+                            <p class="detail-creator">作者：${card.creator || '未知'}</p>
+                            <div class="card-tags" style="margin-bottom: 16px;">
+                                ${(card.tags || []).map(tag => `
+                                    <span class="card-tag">${tag}</span>
+                                `).join('')}
+                            </div>
+                            <div class="detail-actions">
+                                <button class="btn btn-secondary" onclick="toggleFavorite('${card.id}', ${card.favorited})">
+                                    ${card.favorited ? '★ 已收藏' : '☆ 收藏'}
+                                </button>
+                                <button class="btn btn-secondary" onclick="downloadCard('${card.id}')">下载</button>
+                                <button class="btn btn-secondary" onclick="deleteCard('${card.id}')">删除</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${card.description ? `
+                        <div class="detail-section">
+                            <h3 class="detail-section-title">描述</h3>
+                            <div class="detail-section-content">${card.description}</div>
+                        </div>
+                    ` : ''}
+                    
+                    ${card.personality ? `
+                        <div class="detail-section">
+                            <h3 class="detail-section-title">性格</h3>
+                            <div class="detail-section-content">${card.personality}</div>
+                        </div>
+                    ` : ''}
+                    
+                    ${card.scenario ? `
+                        <div class="detail-section">
+                            <h3 class="detail-section-title">场景</h3>
+                            <div class="detail-section-content">${card.scenario}</div>
+                        </div>
+                    ` : ''}
+                    
+                    ${card.first_mes ? `
+                        <div class="detail-section">
+                            <h3 class="detail-section-title">开场白</h3>
+                            <div class="detail-section-content">${card.first_mes}</div>
+                        </div>
+                    ` : ''}
+                    
+                    ${card.mes_example ? `
+                        <div class="detail-section">
+                            <h3 class="detail-section-title">对话示例</h3>
+                            <div class="detail-section-content">${card.mes_example}</div>
+                        </div>
+                    ` : ''}
+                    
+                    ${card.system_prompt ? `
+                        <div class="detail-section">
+                            <h3 class="detail-section-title">系统提示词</h3>
+                            <div class="detail-section-content">${card.system_prompt}</div>
+                        </div>
+                    ` : ''}
+                    
+                    ${card.world ? `
+                        <div class="detail-section">
+                            <h3 class="detail-section-title">世界书</h3>
+                            <div class="detail-section-content">${typeof card.world === 'string' ? card.world : JSON.stringify(card.world, null, 2)}</div>
+                        </div>
+                    ` : ''}
+                `;
+                
+                document.getElementById('detailPage').classList.add('active');
+            } catch (error) {
+                alert('加载详情失败: ' + error.message);
+            }
+        }
+
+        // 切换收藏
+        async function toggleFavorite(id, current) {
+            try {
+                await api(`/cards/${id}`, {
+                    method: 'PUT',
+                    body: { favorited: !current }
+                });
+                loadCards(state.currentPage);
+                document.getElementById('detailPage').classList.remove('active');
+            } catch (error) {
+                alert('操作失败: ' + error.message);
+            }
+        }
+
+        // 下载角色卡
+        function downloadCard(id) {
+            window.open(`${API_BASE}/cards/${id}/download`, '_blank');
+        }
+
+        // 删除角色卡
+        async function deleteCard(id) {
+            if (!confirm('确定要删除这张角色卡吗？')) return;
+            
+            try {
+                await api(`/cards/${id}`, { method: 'DELETE' });
+                loadCards(state.currentPage);
+                document.getElementById('detailPage').classList.remove('active');
+            } catch (error) {
+                alert('删除失败: ' + error.message);
+            }
+        }
+
+        // 视图切换
+        document.querySelectorAll('.view-btn[data-view]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.view-btn[data-view]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.viewMode = btn.dataset.view;
+                renderCards();
+            });
+        });
+
+        // 排序
+        document.getElementById('sortSelect').addEventListener('change', (e) => {
+            state.sortBy = e.target.value;
+            loadCards();
+        });
+
+        // 搜索
+        let searchTimeout;
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                state.searchQuery = e.target.value;
+                loadCards();
+            }, 300);
+        });
+
+        // 收藏筛选
+        document.getElementById('favoriteFilter').addEventListener('change', (e) => {
+            state.favoritesOnly = e.target.checked;
+            loadCards();
+        });
+
+        // 聊天记录筛选
+        document.getElementById('chatFilter').addEventListener('change', (e) => {
+            state.hasChatOnly = e.target.checked;
+            loadCards();
+        });
+
+        // 主题切换
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            document.body.classList.toggle('light-theme');
+            const isLight = document.body.classList.contains('light-theme');
+            document.getElementById('themeToggle').textContent = isLight ? '☀️' : '🌙';
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        });
+
+        // 关闭详情页
+        document.getElementById('detailClose').addEventListener('click', () => {
+            document.getElementById('detailPage').classList.remove('active');
+        });
+
+        // 上传功能
+        document.getElementById('importBtn').addEventListener('click', () => {
+            document.getElementById('uploadModal').classList.add('active');
+        });
+
+        document.getElementById('cancelUpload').addEventListener('click', () => {
+            document.getElementById('uploadModal').classList.remove('active');
+        });
+
+        document.getElementById('uploadZone').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+
+        document.getElementById('uploadZone').addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        });
+
+        document.getElementById('uploadZone').addEventListener('dragleave', (e) => {
+            e.currentTarget.classList.remove('dragover');
+        });
+
+        document.getElementById('uploadZone').addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        let selectedFiles = [];
+
+        function handleFiles(files) {
+            selectedFiles = Array.from(files).filter(f => 
+                f.type === 'image/png' || f.name.endsWith('.json')
+            );
+            
+            if (selectedFiles.length > 0) {
+                document.getElementById('confirmUpload').disabled = false;
+                document.getElementById('uploadZone').innerHTML = `
+                    <div class="upload-icon">✅</div>
+                    <p class="upload-text">已选择 ${selectedFiles.length} 个文件</p>
+                    <p class="upload-hint">${selectedFiles.map(f => f.name).join(', ')}</p>
+                `;
+            }
+        }
+
+        document.getElementById('confirmUpload').addEventListener('click', async () => {
+            if (selectedFiles.length === 0) return;
+            
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            progressBar.style.display = 'block';
+            
+            let uploaded = 0;
+            
+            for (const file of selectedFiles) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    await api('/cards', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {} // 让浏览器自动设置 Content-Type
+                    });
+                    
+                    uploaded++;
+                    progressFill.style.width = `${(uploaded / selectedFiles.length) * 100}%`;
+                } catch (error) {
+                    console.error('上传失败:', error);
+                }
+            }
+            
+            alert(`上传完成: ${uploaded}/${selectedFiles.length}`);
+            document.getElementById('uploadModal').classList.remove('active');
+            loadCards();
+        });
+
+        // 全量备份
+        document.getElementById('exportAllBtn').addEventListener('click', async () => {
+            if (!confirm('确定要导出全量备份吗？')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/export/all`, {
+                    headers: { 'Authorization': `Bearer ${state.token}` }
+                });
+                
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `character-cards-backup-${Date.now()}.zip`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                alert('导出失败: ' + error.message);
+            }
+        });
+
+        // 初始化
+        if (state.token) {
+            showApp();
+        }
+
+        // 加载主题偏好
+        if (localStorage.getItem('theme') === 'light') {
+            document.body.classList.add('light-theme');
+            document.getElementById('themeToggle').textContent = '☀️';
+        }
+    </script>
+</body>
+</html>

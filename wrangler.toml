@@ -1,0 +1,17 @@
+name = "character-card-vault"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# ACCESS_PASSWORD = "your-password-here"  # 部署时在 Cloudflare Dashboard 设置
+
+[[r2_buckets]]
+binding = "CARDS_BUCKET"
+bucket_name = "character-cards"
+
+[[kv_namespaces]]
+binding = "CARDS_KV"
+id = "your-kv-namespace-id"
+
+[site]
+bucket = "./public"
