@@ -1839,7 +1839,7 @@
                     <div class="chat-container" id="chatSection">
                         <div class="chat-header">
                             <h3 class="detail-section-title" style="margin-bottom: 0;">聊天记录</h3>
-                            <input type="file" id="chatFileInput" accept=".json,.jsonl" style="display: none;" onchange="uploadChat(event, '${card.id}')">
+                            <input type="file" id="chatFileInput" accept=".json,.jsonl" multiple style="display: none;" onchange="uploadChat(event, '${card.id}')">
                             <button class="btn btn-secondary" onclick="document.getElementById('chatFileInput').click()">导入聊天记录</button>
                         </div>
                         <div id="chatList"><p style="color: var(--text-secondary); font-size: 14px;">加载中...</p></div>
@@ -2018,6 +2018,7 @@
                         </div>
                         <div class="chat-item-actions">
                             <button class="btn btn-secondary" onclick="viewChat('${chat.id}')">查看</button>
+                            <button class="btn btn-secondary" onclick="renameChat('${cardId}', '${chat.id}', this)" data-title="${esc(chat.title || '')}">重命名</button>
                             <button class="btn btn-secondary" onclick="exportChat('${chat.id}')">导出</button>
                             <button class="btn btn-secondary" onclick="deleteChat('${cardId}', '${chat.id}')">删除</button>
                         </div>
@@ -2066,20 +2067,50 @@
                 .catch(error => alert('导出失败: ' + error.message));
         }
 
-        // 导入聊天记录
+        // 导入聊天记录（支持多文件，重复内容自动跳过）
         async function uploadChat(event, cardId) {
-            const file = event.target.files[0];
-            if (!file) return;
+            const files = Array.from(event.target.files || []);
+            if (!files.length) return;
+            let ok = 0, dup = 0;
+            const failed = [];
+            for (const file of files) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('cardId', cardId);
+                    await api('/chats', { method: 'POST', body: formData });
+                    ok++;
+                } catch (error) {
+                    if (/已存在/.test(error.message)) {
+                        dup++;
+                    } else {
+                        failed.push(`${file.name}（${error.message}）`);
+                    }
+                }
+            }
+            const parts = [`成功 ${ok}`, `重复跳过 ${dup}`];
+            if (failed.length) parts.push(`失败 ${failed.length}：${failed.join('；')}`);
+            alert(`聊天记录导入完成：${parts.join('，')}`);
+            loadCardChats(cardId);
+            event.target.value = '';
+        }
+
+        // 重命名聊天记录
+        async function renameChat(cardId, chatId, btn) {
+            const current = btn ? (btn.getAttribute('data-title') || '') : '';
+            const newTitle = prompt('重命名聊天记录：', current);
+            if (newTitle === null) return;
+            const title = newTitle.trim();
+            if (!title) return alert('标题不能为空');
             try {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('cardId', cardId);
-                await api('/chats', { method: 'POST', body: formData });
+                await api(`/chats/${encodeURIComponent(chatId)}`, {
+                    method: 'PUT',
+                    body: { title }
+                });
                 loadCardChats(cardId);
             } catch (error) {
-                alert('导入聊天记录失败: ' + error.message);
+                alert('重命名失败: ' + error.message);
             }
-            event.target.value = '';
         }
 
         // ============ 批量操作 ============

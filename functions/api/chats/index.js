@@ -2,6 +2,7 @@
 // POST /api/chats - 导入聊天记录
 
 import { uploadToTelegram } from '../../utils/telegram.js';
+import { generateFingerprint } from '../cards/index.js';
 
 // 解析 JSONL 文件
 function parseJSONL(text) {
@@ -25,6 +26,34 @@ function parseJSON(text) {
     } catch (e) {
         return [];
     }
+}
+
+// 消息格式映射：统一为 { role, content, name }
+// 兼容 SillyTavern（name/is_user/mes）、ShareGPT（from/value）、通用 ChatML（role/content）
+export function normalizeMessage(m) {
+    if (!m || typeof m !== 'object') return null;
+
+    let role = m.role;
+    if (role === undefined || role === null || role === '') {
+        if (typeof m.is_user === 'boolean') {
+            role = m.is_user ? 'user' : 'assistant';
+        } else if (m.from === 'human' || m.from === 'user') {
+            role = 'user';
+        } else if (m.from === 'gpt' || m.from === 'assistant' || m.from === 'bot') {
+            role = 'assistant';
+        } else if (m.from) {
+            role = String(m.from);
+        } else {
+            role = 'assistant';
+        }
+    }
+
+    const rawContent = m.content ?? m.mes ?? m.value ?? m.text ?? '';
+    const content = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent);
+    const name = m.name || m.role_name || (role === 'user' ? '用户' : role === 'assistant' ? '角色' : String(role));
+
+    if (!content) return null;
+    return { role: String(role), content, name: String(name) };
 }
 
 // 生成聊天记录 ID
@@ -112,13 +141,16 @@ export async function onRequestPost(context) {
         }
 
         const text = await file.text();
-        let messages;
+        let rawMessages;
 
         if (file.name.endsWith('.jsonl')) {
-            messages = parseJSONL(text);
+            rawMessages = parseJSONL(text);
         } else {
-            messages = parseJSON(text);
+            rawMessages = parseJSON(text);
         }
+
+        // 消息格式映射（SillyTavern / ShareGPT / 通用 role+content），统一后入库
+        const messages = rawMessages.map(normalizeMessage).filter(Boolean);
 
         if (messages.length === 0) {
             return new Response(JSON.stringify({ ok: false, error: '未找到有效的消息数据' }), {
@@ -127,11 +159,23 @@ export async function onRequestPost(context) {
             });
         }
 
+        const jsonlContent = messages.map(m => JSON.stringify(m)).join('\n');
+
+        // 内容指纹去重：同一张卡下相同内容的聊天记录只保留一份
+        const fingerprint = await generateFingerprint(new TextEncoder().encode(jsonlContent));
+        const existingChats = await context.env.CARDS_KV.list({ prefix: `chat:${cardId}:` });
+        for (const key of existingChats.keys) {
+            const existing = await context.env.CARDS_KV.get(key.name, { type: 'json' });
+            if (existing && existing.fingerprint === fingerprint) {
+                return new Response(JSON.stringify({ ok: false, error: '该聊天记录已存在' }), {
+                    status: 409,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+        }
+
         // 生成聊天记录 ID
         const chatId = generateChatId();
-
-        // 上传到 Telegram
-        const jsonlContent = messages.map(m => JSON.stringify(m)).join('\n');
         const chatFile = new File([jsonlContent], `${chatId}.jsonl`, { type: 'application/jsonl' });
         
         const uploadResult = await uploadToTelegram(
@@ -154,6 +198,7 @@ export async function onRequestPost(context) {
             cardId,
             title,
             msgCount: messages.length,
+            fingerprint,
             telegramFileId: uploadResult.fileId,
             telegramFileName: uploadResult.fileName,
             telegramMessageId: uploadResult.messageId,

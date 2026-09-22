@@ -3,6 +3,7 @@
 // DELETE /api/chats/:id - 删除聊天记录
 
 import { downloadFromTelegram, uploadToTelegram, deleteTelegramMessage } from '../../utils/telegram.js';
+import { normalizeMessage } from '../index.js';
 
 export async function onRequestGet(context) {
     try {
@@ -104,7 +105,8 @@ export async function onRequestPut(context) {
             const tgChatId = context.env.TG_CHAT_ID;
 
             if (tgBotToken && tgChatId) {
-                const jsonlContent = body.messages.map(m => JSON.stringify(m)).join('\n');
+                const normalized = body.messages.map(normalizeMessage).filter(Boolean);
+                const jsonlContent = normalized.map(m => JSON.stringify(m)).join('\n');
                 const chatFile = new File([jsonlContent], `${chatIndex.id}.jsonl`, { type: 'application/jsonl' });
                 
                 const uploadResult = await uploadToTelegram(
@@ -117,7 +119,7 @@ export async function onRequestPut(context) {
                 chatIndex.telegramFileId = uploadResult.fileId;
                 chatIndex.telegramFileName = uploadResult.fileName;
                 chatIndex.telegramMessageId = uploadResult.messageId;
-                chatIndex.msgCount = body.messages.length;
+                chatIndex.msgCount = normalized.length;
                 chatIndex.fileSize = new TextEncoder().encode(jsonlContent).length;
             }
         }

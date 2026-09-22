@@ -59,7 +59,7 @@ export function parseCharacterCard(buffer) {
 }
 
 // 生成 SHA-256 指纹
-async function generateFingerprint(buffer) {
+export async function generateFingerprint(buffer) {
     const hash = await crypto.subtle.digest('SHA-256', buffer);
     return Array.from(new Uint8Array(hash))
         .map(b => b.toString(16).padStart(2, '0'))
