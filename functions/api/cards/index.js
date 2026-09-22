@@ -15,7 +15,6 @@ export function normalizeTags(tags) {
 
 // 解析 PNG 文件中的角色卡数据
 export function parseCharacterCard(buffer) {
-    const textChunks = [];
     let offset = 8;
 
     while (offset < buffer.length) {
@@ -112,7 +111,6 @@ export async function onRequestGet(context) {
                         (c.description && c.description.toLowerCase().includes(query)) ||
                         (c.personality && c.personality.toLowerCase().includes(query)) ||
                         (c.scenario && c.scenario.toLowerCase().includes(query)) ||
-                        (c.first_mes && c.first_mes.toLowerCase().includes(query)) ||
                         (c.mes_example && c.mes_example.toLowerCase().includes(query)) ||
                         (c.system_prompt && c.system_prompt.toLowerCase().includes(query)) ||
                         (c.world && JSON.stringify(c.world).toLowerCase().includes(query)) ||
@@ -259,7 +257,6 @@ export async function onRequestPost(context) {
         const description = truncateText(cardData.description);
         const personality = truncateText(cardData.personality);
         const scenario = truncateText(cardData.scenario);
-        const first_mes = truncateText(cardData.first_mes);
         const mes_example = truncateText(cardData.mes_example);
         const system_prompt = truncateText(cardData.system_prompt);
         const world = cardData.world || null;
@@ -272,6 +269,9 @@ export async function onRequestPost(context) {
             `角色卡: ${name}`
         );
 
+        // 开场白数量 = 主开场白 + 备选开场白（酒馆 alternate_greetings）
+        const alternateGreetings = Array.isArray(cardData.alternate_greetings) ? cardData.alternate_greetings : [];
+
         const cardIndex = {
             id: fingerprint,
             name,
@@ -283,10 +283,10 @@ export async function onRequestPost(context) {
             description,
             personality,
             scenario,
-            first_mes,
             mes_example,
             system_prompt,
             world,
+            greetingCount: (cardData.first_mes ? 1 : 0) + alternateGreetings.length,
             telegramFileId: uploadResult.fileId,
             telegramFileName: uploadResult.fileName,
             telegramMessageId: uploadResult.messageId,

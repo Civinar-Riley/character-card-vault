@@ -1006,9 +1006,7 @@
                     <option value="all">搜索范围：全部字段</option>
                     <option value="name">搜索范围：名称</option>
                     <option value="creator">搜索范围：作者</option>
-                    <option value="description">搜索范围：描述</option>
-                    <option value="first_mes">搜索范围：开场白</option>
-                    <option value="system_prompt">搜索范围：系统提示词</option>
+                    <option value="description">搜索范围：简介</option>
                     <option value="filename">搜索范围：文件名</option>
                 </select>
                 <label style="display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 14px;">
@@ -1273,8 +1271,12 @@
                 document.getElementById('searchClear').classList.add('visible');
             }
             if (params.get('scope')) {
-                state.searchScope = params.get('scope');
-                document.getElementById('searchScope').value = state.searchScope;
+                // 仅接受当前下拉框中存在的范围值，防止旧链接残留导致空结果
+                const scope = params.get('scope');
+                if ([...document.getElementById('searchScope').options].some(o => o.value === scope)) {
+                    state.searchScope = scope;
+                    document.getElementById('searchScope').value = scope;
+                }
             }
             if (params.get('tag')) state.selectedTag = params.get('tag');
             if (params.get('favorite') === 'true') {
@@ -1320,12 +1322,12 @@
             }
 
             const response = await fetch(url, { ...options, headers });
-            const data = await response.json();
-            
+            const data = await response.json().catch(() => ({ ok: false, error: '服务返回异常' }));
+
             if (!data.ok) {
                 throw new Error(data.error || '请求失败');
             }
-            
+
             return data;
         }
 
@@ -1433,6 +1435,9 @@
                 document.getElementById('cardCount').textContent = `共 ${data.total} 张角色卡`;
             } catch (error) {
                 console.error('加载失败:', error);
+                const container = document.getElementById('cardsContainer');
+                container.className = '';
+                container.innerHTML = `<div class="empty-state"><p>加载失败: ${esc(error.message)}</p><p class="empty-hint">请检查网络后刷新重试</p></div>`;
             }
         }
 
@@ -1688,10 +1693,10 @@
                         </div>
                     ` : ''}
 
-                    ${card.first_mes ? `
+                    ${(card.greetingCount ?? (card.first_mes ? 1 : 0)) > 0 ? `
                         <div class="detail-section">
                             <h3 class="detail-section-title">开场白</h3>
-                            <div class="detail-section-content">${esc(card.first_mes)}</div>
+                            <div class="detail-section-content">共 ${card.greetingCount ?? 1} 个开场白（完整内容以角色卡文件为准）</div>
                         </div>
                     ` : ''}
 
@@ -2107,6 +2112,7 @@
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', `${API_BASE}/cards`);
                 xhr.setRequestHeader('Authorization', `Bearer ${state.token}`);
+                xhr.timeout = 300000; // 大文件兜底，避免永久挂起
                 xhr.upload.onprogress = (e) => {
                     if (e.lengthComputable) onProgress(e.loaded / e.total);
                 };
@@ -2119,6 +2125,7 @@
                         reject(new Error('上传失败'));
                     }
                 };
+                xhr.ontimeout = () => reject(new Error('上传超时'));
                 xhr.onerror = () => reject(new Error('网络错误'));
                 xhr.send(formData);
             });
