@@ -9,7 +9,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* 深空黑底 + 琥珀金 */
+            /* 深空黑底 + 琥珀金；color-scheme 让原生下拉/滚动条按深色渲染 */
+            color-scheme: dark;
             --bg-deep: #0a0c10;
             --bg-surface: #12151c;
             --bg-card: rgba(18, 21, 28, 0.8);
@@ -857,6 +858,11 @@
             cursor: pointer;
         }
 
+        .setting-row input[type="range"] {
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
         .setting-hint {
             font-size: 12px;
             color: var(--text-secondary);
@@ -952,14 +958,15 @@
 
         /* 亮色主题：整体覆盖变量，所有使用变量的组件全局切换 */
         body.light-theme {
-            --bg-deep: #f5f3f0;
-            --bg-surface: #ffffff;
-            --bg-card: #ffffff;
+            color-scheme: light;
+            --bg-deep: #f2efea;
+            --bg-surface: #faf7f2;
+            --bg-card: #faf7f2;
             --accent: #a67c00;
             --accent-glow: rgba(166, 124, 0, 0.25);
             --text-primary: #1f2329;
             --text-secondary: #6b7280;
-            --border: rgba(0, 0, 0, 0.12);
+            --border: rgba(0, 0, 0, 0.18);
             --glass: rgba(0, 0, 0, 0.03);
             background-color: var(--bg-deep);
             color: var(--text-primary);
@@ -969,15 +976,15 @@
             background:
                 radial-gradient(ellipse at 20% 80%, rgba(166, 124, 0, 0.08) 0%, transparent 50%),
                 radial-gradient(ellipse at 80% 20%, rgba(0, 0, 0, 0.05) 0%, transparent 50%),
-                linear-gradient(135deg, #f5f3f0 0%, #ece9e4 100%);
+                linear-gradient(135deg, #f2efea 0%, #eae6df 100%);
         }
 
         body.light-theme .navbar {
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(250, 247, 242, 0.85);
         }
 
         body.light-theme .detail-page {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(250, 247, 242, 0.96);
         }
 
         body.light-theme .message.assistant {
@@ -1147,6 +1154,13 @@
                     <span>背景图显示</span>
                     <input type="checkbox" id="settingBackground">
                 </label>
+                <div class="setting-row" id="bgOpacityRow">
+                    <span>背景图不透明度</span>
+                    <span style="display: flex; align-items: center; gap: 8px;">
+                        <input type="range" id="settingBgOpacity" min="10" max="100" step="10" style="width: 130px;">
+                        <span id="bgOpacityValue" style="min-width: 40px; text-align: right; color: var(--text-secondary); font-size: 13px;">100%</span>
+                    </span>
+                </div>
                 <p class="setting-hint" id="settingBackgroundHint" style="display: none;">未配置 SITE_BACKGROUND 环境变量</p>
                 <label class="setting-row">
                     <span>主题</span>
@@ -1210,6 +1224,7 @@
         // 用户偏好设置（浏览器维度，存 localStorage）
         const settings = Object.assign({
             showBackground: true,
+            bgOpacity: 100,
             theme: 'dark',
             pageSize: 30,
             reduceMotion: false,
@@ -1230,8 +1245,12 @@
         function applyBackground() {
             const bg = document.querySelector('.bg-gradient');
             if (settings.showBackground && siteConfig.siteBackground) {
+                // 背景图不透明度：透明度越高，遮罩越淡；遮罩颜色随主题
+                const imgAlpha = Math.min(Math.max(settings.bgOpacity ?? 100, 0), 100) / 100;
+                const overlayAlpha = 1 - imgAlpha;
+                const rgb = settings.theme === 'light' ? '242, 239, 234' : '10, 12, 16';
                 bg.style.background =
-                    `linear-gradient(rgba(10, 12, 16, 0.75), rgba(10, 12, 16, 0.75)), url("${siteConfig.siteBackground}") center / cover no-repeat`;
+                    `linear-gradient(rgba(${rgb}, ${overlayAlpha.toFixed(2)}), rgba(${rgb}, ${overlayAlpha.toFixed(2)})), url("${siteConfig.siteBackground}") center / cover no-repeat`;
             } else {
                 bg.style.background = '';
             }
@@ -1253,6 +1272,8 @@
 
         function initSettingsUI() {
             document.getElementById('settingBackground').checked = settings.showBackground;
+            document.getElementById('settingBgOpacity').value = String(settings.bgOpacity ?? 100);
+            document.getElementById('bgOpacityValue').textContent = `${settings.bgOpacity ?? 100}%`;
             document.getElementById('settingTheme').value = settings.theme;
             document.getElementById('settingPageSize').value = String(settings.pageSize);
             document.getElementById('settingReduceMotion').checked = settings.reduceMotion;
@@ -1260,6 +1281,12 @@
             const bgInput = document.getElementById('settingBackground');
             bgInput.addEventListener('change', (e) => {
                 settings.showBackground = e.target.checked;
+                saveSettings();
+                applyBackground();
+            });
+            document.getElementById('settingBgOpacity').addEventListener('input', (e) => {
+                settings.bgOpacity = parseInt(e.target.value, 10);
+                document.getElementById('bgOpacityValue').textContent = `${settings.bgOpacity}%`;
                 saveSettings();
                 applyBackground();
             });
@@ -1333,9 +1360,10 @@
                     }
                 }
             } catch (e) { /* 使用默认品牌 */ }
-            // 背景可用性此时才确定：未配置则禁用开关并提示
+            // 背景可用性此时才确定：未配置则禁用相关控件并提示
             if (!siteConfig.siteBackground) {
                 document.getElementById('settingBackground').disabled = true;
+                document.getElementById('settingBgOpacity').disabled = true;
                 document.getElementById('settingBackgroundHint').style.display = 'block';
             }
             applySettings();
@@ -1387,7 +1415,8 @@
             a.href = URL.createObjectURL(blob);
             a.download = m ? decodeURIComponent(m[1]) : fallbackName;
             a.click();
-            URL.revokeObjectURL(a.href);
+            // 延迟释放，避免部分浏览器下载未开始就被回收
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
         }
 
         // 缩略图会话缓存（cardId -> blobURL），避免重复从 Telegram 下载
@@ -1994,7 +2023,7 @@
                 a.href = url;
                 a.download = `character-cards-batch-${Date.now()}.json`;
                 a.click();
-                URL.revokeObjectURL(url);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
             } catch (error) {
                 alert('批量导出失败: ' + error.message);
             }
@@ -2274,7 +2303,7 @@
                 a.href = url;
                 a.download = `character-cards-full-backup-${Date.now()}.json`;
                 a.click();
-                URL.revokeObjectURL(url);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
             } catch (error) {
                 alert('导出失败: ' + error.message);
             }
