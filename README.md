@@ -10,7 +10,7 @@
 - **批量操作**：多选后批量收藏、批量取消收藏、批量删除、批量导出
 - **数据备份**：全量备份导出（JSON 格式），支持从备份文件恢复（已存在的内容自动跳过）
 - **设置面板**：导航栏 ⚙ 打开，支持背景图开关、主题切换、每页数量、减弱动画、清空缩略图缓存、视图模式记忆，偏好本地保存
-- **站点自定义**：通过环境变量 `SITE_NAME` / `SITE_TITLE` / `SITE_BACKGROUND` 更换站点名称、标签页标题和背景图，无需改代码
+- **站点自定义**：通过 `wrangler.toml` 的 `[vars]` 配置 `SITE_NAME` / `SITE_TITLE` / `SITE_BACKGROUND` 更换站点名称、标签页标题和背景图，无需改代码
 - **响应式设计**：适配桌面和移动端
 - **暗色/亮色主题**：支持主题切换（导航栏快捷键 + 设置面板同步）
 
@@ -31,11 +31,11 @@
 - 标签云的"管理标签"支持全局新建/重命名/删除标签（影响所有卡片）
 - 手动修改只更新仓库索引，不会改动 Telegram 中的原始文件
 
-**修改预制选项**：预制作者和预制标签无需改代码，通过环境变量配置（见上表）：
+**修改预制选项**：预制作者和预制标签无需改代码，在 `wrangler.toml` 的 `[vars]` 中配置（文件内有注释示例）：
 
 - `PRESET_CREATOR=你的名字` —— 替换一键作者按钮
 - `PRESET_TAGS=标签A,标签B` —— 替换一键标签（逗号分隔可多个）
-- 设为空值则隐藏对应按钮；修改后需重新部署
+- 设为空值则隐藏对应按钮；提交后自动部署生效
 
 ## 技术栈
 
@@ -49,9 +49,9 @@
 1. 创建 Telegram Bot（通过 @BotFather）
 2. 创建 Telegram 频道并将 Bot 设为管理员
 3. 创建 KV 命名空间并复制其 ID
-4. Fork 本仓库到 GitHub，**将 `wrangler.toml` 中的 KV 命名空间 ID 替换为你自己的**
+4. Fork 本仓库到 GitHub，**将 `wrangler.toml` 中的 KV 命名空间 ID 替换为你自己的**（顺手可改 `[vars]` 里的站名）
 5. 在 Cloudflare Pages 连接仓库并部署
-6. 设置环境变量：`ACCESS_PASSWORD`、`TG_BOT_TOKEN`、`TG_CHAT_ID`
+6. 以"机密"类型设置环境变量：`ACCESS_PASSWORD`、`TG_BOT_TOKEN`、`TG_CHAT_ID`
 
 > KV ID 属于你的 Cloudflare 账号，不改的话部署会报 `Invalid KV namespace ID`。详见 [DEPLOY.md](DEPLOY.md)。
 
@@ -59,18 +59,23 @@
 
 ## 环境变量
 
-| 变量名 | 说明 | 必填 |
-|--------|------|------|
-| `ACCESS_PASSWORD` | 访问密码 | 是 |
-| `TG_BOT_TOKEN` | Telegram Bot Token | 是 |
-| `TG_CHAT_ID` | Telegram 频道 Chat ID | 是 |
-| `SITE_NAME` | 站点名称（导航栏和登录页显示），默认"角色卡仓库" | 否 |
-| `SITE_TITLE` | 浏览器标签页标题，默认不变 | 否 |
-| `SITE_BACKGROUND` | 登录页/主页面背景图 URL | 否 |
-| `PRESET_CREATOR` | 详情页一键作者按钮文字，默认"西维纳尔"，设为空则隐藏按钮 | 否 |
-| `PRESET_TAGS` | 详情页一键标签（逗号分隔可多个），默认"已发布"，设为空则隐藏按钮 | 否 |
+| 变量名 | 说明 | 必填 | 配置位置 |
+|--------|------|------|----------|
+| `ACCESS_PASSWORD` | 访问密码 | 是 | 仪表板"机密"类型 |
+| `TG_BOT_TOKEN` | Telegram Bot Token | 是 | 仪表板"机密"类型 |
+| `TG_CHAT_ID` | Telegram 频道 Chat ID | 是 | 仪表板"机密"类型 |
+| `SITE_NAME` | 站点名称（导航栏和登录页显示），默认"角色卡仓库" | 否 | `wrangler.toml` `[vars]` |
+| `SITE_TITLE` | 浏览器标签页标题，默认不变 | 否 | `wrangler.toml` `[vars]` |
+| `SITE_BACKGROUND` | 登录页/主页面背景图 URL | 否 | `wrangler.toml` `[vars]` |
+| `PRESET_CREATOR` | 详情页一键作者按钮文字，默认"西维纳尔"，设为空则隐藏按钮 | 否 | `wrangler.toml` `[vars]` |
+| `PRESET_TAGS` | 详情页一键标签（逗号分隔可多个），默认"已发布"，设为空则隐藏按钮 | 否 | `wrangler.toml` `[vars]` |
 
-修改环境变量后需重新部署才会生效。
+说明：
+
+- 仓库带 `wrangler.toml` 后，Cloudflare 把普通变量锁定为 wrangler.toml 管理，仪表板只能添加"机密"（加密）变量
+- `wrangler.toml` 的 `[vars]` 里已内置站名等示例值，**Fork 后请改成你自己的**，或删除对应行恢复默认值
+- 机密变量（密码、Token）切勿写入 `wrangler.toml`——文件会提交到仓库，明文等于泄漏
+- 修改环境变量后需重新部署才会生效
 
 ## 本地开发
 
@@ -126,10 +131,10 @@ POST   /api/import         # 从备份恢复（接受全量备份 / 批量导出
 character-card-vault/
 ├── wrangler.toml                      # Cloudflare 配置
 ├── functions/
-│   ├── _middleware.js                  # CORS + 认证中间件
 │   ├── utils/
 │   │   └── telegram.js                # Telegram Bot API 工具
 │   └── api/
+│       ├── _middleware.js             # CORS + 认证中间件
 │       ├── auth/
 │       │   └── login.js               # 登录
 │       ├── cards/

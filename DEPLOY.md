@@ -53,6 +53,8 @@
    替换为步骤 2 记录的**你自己的命名空间 ID**
 3. 点击 **Commit changes**（直接提交到 main 分支）
 
+> 提醒：`[vars]` 里的 `SITE_NAME`（站名）、`SITE_TITLE`（标签页标题）等站点自定义变量也建议顺手改成你自己的——不改的话，你的站点会显示原作者的站名（详见步骤 5）。
+
 ### 4. 连接 GitHub 仓库
 
 1. 在 Cloudflare 控制台左侧菜单选择 **Workers 和 Pages**
@@ -70,21 +72,28 @@
 
 ### 5. 设置环境变量
 
-1. 进入刚创建的 Pages 项目
-2. 点击 **设置** 标签
-3. 左侧选择 **环境变量**
-4. 在 **生产** 部分点击 **添加变量**
-5. 添加以下变量：
-   - **变量名称**：`ACCESS_PASSWORD`，**值**：设置你的访问密码
-   - **变量名称**：`TG_BOT_TOKEN`，**值**：你的 Telegram Bot Token
-   - **变量名称**：`TG_CHAT_ID`，**值**：你的 Telegram 频道 Chat ID
-6. （可选）站点自定义变量：
-   - `SITE_NAME`：站点名称（默认"角色卡仓库"）
-   - `SITE_TITLE`：浏览器标签页标题
-   - `SITE_BACKGROUND`：背景图 URL
-   - `PRESET_CREATOR`：详情页一键作者按钮（默认"西维纳尔"，设为空隐藏）
-   - `PRESET_TAGS`：详情页一键标签，逗号分隔（默认"已发布"，设为空隐藏）
-7. 点击 **保存**
+由于仓库带 `wrangler.toml`（部署配置源），环境变量分两类管理。仪表板若提示
+**"环境变量在通过 wrangler.toml 进行管理，仅机密（加密变量）可以通过仪表板管理"**，即下述规则：
+
+**A. 机密变量（在仪表板添加，类型选"机密"）—— 3 个必填**
+
+1. 进入刚创建的 Pages 项目 → **设置** → **环境变量**
+2. 在 **生产** 部分点击 **添加变量**，**类型选择"机密"（加密）**，逐个添加：
+   - `ACCESS_PASSWORD`：设置你的访问密码
+   - `TG_BOT_TOKEN`：你的 Telegram Bot Token
+   - `TG_CHAT_ID`：你的 Telegram 频道 Chat ID
+3. 点击 **保存**
+
+> ⚠ 机密变量**绝对不要**写进 `wrangler.toml`——该文件会提交到 GitHub，明文等于泄漏。
+
+**B. 站点自定义变量（改 `wrangler.toml` 的 `[vars]`）—— 全部可选**
+
+`SITE_NAME`（站名）、`SITE_TITLE`（标签页标题）、`SITE_BACKGROUND`（背景图 URL）、
+`PRESET_CREATOR`（详情页一键作者）、`PRESET_TAGS`（一键标签，逗号分隔）等非敏感变量
+直接写在 Fork 仓库的 `wrangler.toml` `[vars]` 里（文件内有注释示例），**提交后自动部署生效，
+无需在仪表板添加**；删除某行则恢复代码默认值。
+
+改完后如未自动部署，手动触发一次：项目页 → **重试部署**。
 
 ### 6. KV 绑定说明
 
@@ -138,12 +147,10 @@ wrangler kv namespace create CARDS_KV
 ### 5. 设置环境变量
 
 ```bash
-# 创建 .dev.vars 文件（本地开发用）
+# 本地开发用（.dev.vars 已被 .gitignore 排除，不会提交）
 echo 'ACCESS_PASSWORD="your-password-here"' > .dev.vars
 echo 'TG_BOT_TOKEN="your-bot-token"' >> .dev.vars
 echo 'TG_CHAT_ID="your-chat-id"' >> .dev.vars
-
-# 生产环境需要在 Cloudflare 控制台设置
 ```
 
 ### 6. 本地开发测试
@@ -160,12 +167,17 @@ wrangler pages dev public
 wrangler pages deploy public
 ```
 
-### 8. 设置生产环境变量
+### 8. 设置生产环境机密变量
 
-1. 访问 https://dash.cloudflare.com
-2. 进入 Workers 和 Pages > 你的项目 > 设置 > 环境变量
-3. 添加 `ACCESS_PASSWORD`、`TG_BOT_TOKEN`、`TG_CHAT_ID` 变量
-4. 绑定 KV（参考方式一的步骤 5）
+```bash
+npx wrangler pages secret put ACCESS_PASSWORD --project-name=你的项目名
+npx wrangler pages secret put TG_BOT_TOKEN --project-name=你的项目名
+npx wrangler pages secret put TG_CHAT_ID --project-name=你的项目名
+```
+
+（等效于仪表板以"机密"类型添加，也可直接在仪表板操作）
+
+站点自定义变量（`SITE_NAME` 等）写 `wrangler.toml` 的 `[vars]`，`wrangler pages deploy` 会一并生效。
 
 ---
 
@@ -194,6 +206,10 @@ wrangler pages deploy public
 - 原因：Fork 后没有把 `wrangler.toml` 中的 KV 命名空间 ID 替换成自己的（仓库里的 ID 属于原作者账号）
 - 解决：按步骤 3 修改 `wrangler.toml` 中的 `id` 为你自己的 KV 命名空间 ID，重新部署
 
+**Q2.8: 仪表板提示"环境变量在通过 wrangler.toml 进行管理，仅机密（加密变量）可以通过仪表板管理"，无法添加变量**
+- 原因：仓库的 `wrangler.toml` 是部署配置源，普通明文变量统一由该文件管理，仪表板只能添加机密变量
+- 解决：分两类——机密变量（`ACCESS_PASSWORD`、`TG_BOT_TOKEN`、`TG_CHAT_ID`）在仪表板以"机密"类型添加；站点自定义变量（`SITE_NAME`、`SITE_TITLE` 等）改 `wrangler.toml` 的 `[vars]`，提交后生效
+
 **Q3: 图片无法显示**
 - 原因：Telegram Bot 不是频道管理员，或 Chat ID 错误
 - 解决：确保 Bot 已添加为频道管理员，且 Chat ID 正确
@@ -221,9 +237,10 @@ wrangler pages deploy public
 - [ ] KV 命名空间已创建
 - [ ] **`wrangler.toml` 中的 KV ID 已替换为自己的**（Fork 后必改）
 - [ ] GitHub 仓库已连接到 Cloudflare Pages
-- [ ] 环境变量 `ACCESS_PASSWORD` 已设置
-- [ ] 环境变量 `TG_BOT_TOKEN` 已设置
-- [ ] 环境变量 `TG_CHAT_ID` 已设置
+- [ ] 环境变量 `ACCESS_PASSWORD` 已以"机密"类型设置
+- [ ] 环境变量 `TG_BOT_TOKEN` 已以"机密"类型设置
+- [ ] 环境变量 `TG_CHAT_ID` 已以"机密"类型设置
+- [ ] （可选）`wrangler.toml` `[vars]` 中的站点名称等已改成自己的
 - [ ] KV 绑定 `CARDS_KV` 已添加
 - [ ] 部署成功完成
 - [ ] 网站可正常访问

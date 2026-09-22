@@ -4,10 +4,16 @@ compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "./public"
 
 [vars]
-# 以下变量在 Cloudflare Dashboard 的 Settings > Environment variables 中设置
-# ACCESS_PASSWORD = "your-password-here"      # 访问密码
-# TG_BOT_TOKEN = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"  # Telegram Bot Token
-# TG_CHAT_ID = "-1001234567890"               # Telegram 频道 ID
+# 站点自定义变量（非敏感，直接改这里，提交后自动部署生效；删除某行则恢复代码默认值）
+SITE_NAME = "企鹅的角色卡仓库"
+SITE_TITLE = "企鹅角色卡仓库 | 首页"
+# SITE_BACKGROUND = "https://example.com/bg.jpg"   # 背景图 URL，不需要就保持注释
+# PRESET_CREATOR = "西维纳尔"                       # 详情页一键作者按钮，空值隐藏
+# PRESET_TAGS = "已发布"                            # 详情页一键标签（逗号分隔可多个），空值隐藏
+
+# ⚠ 以下机密变量【禁止】写在此处（本文件会提交到仓库，写明文等于泄漏）！
+# 请在 Cloudflare 仪表板 > 项目 > 设置 > 环境变量，以"机密"（加密）类型添加：
+# ACCESS_PASSWORD / TG_BOT_TOKEN / TG_CHAT_ID
 
 [[kv_namespaces]]
 binding = "CARDS_KV"
