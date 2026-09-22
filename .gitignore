@@ -27,3 +27,9 @@ build/
 .env
 .env.local
 .env.*.local
+
+# 开发文档
+计划.md
+
+# 开发工具配置
+opencode.json
