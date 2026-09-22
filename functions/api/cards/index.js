@@ -3,6 +3,16 @@
 
 import { uploadToTelegram } from '../../utils/telegram.js';
 
+// 规范化标签：兼容字符串（中英文逗号分隔）与数组、数组元素内含逗号的情况
+export function normalizeTags(tags) {
+    if (typeof tags === 'string') tags = [tags];
+    if (!Array.isArray(tags)) return [];
+    return tags
+        .flatMap(t => typeof t === 'string' ? t.split(/[,，]/) : [])
+        .map(t => t.trim())
+        .filter(Boolean);
+}
+
 // 解析 PNG 文件中的角色卡数据
 export function parseCharacterCard(buffer) {
     const textChunks = [];
@@ -117,8 +127,11 @@ export async function onRequestGet(context) {
                         (c.first_mes && c.first_mes.toLowerCase().includes(query)) ||
                         (c.mes_example && c.mes_example.toLowerCase().includes(query)) ||
                         (c.system_prompt && c.system_prompt.toLowerCase().includes(query)) ||
-                        (c.world && JSON.stringify(c.world).toLowerCase().includes(query))
+                        (c.world && JSON.stringify(c.world).toLowerCase().includes(query)) ||
+                        (c.telegramFileName && c.telegramFileName.toLowerCase().includes(query))
                     );
+                } else if (scope === 'filename') {
+                    return c.telegramFileName && c.telegramFileName.toLowerCase().includes(query);
                 } else {
                     const fieldValue = c[scope];
                     if (typeof fieldValue === 'string') {
@@ -136,7 +149,14 @@ export async function onRequestGet(context) {
                 cards.sort((a, b) => a.importedAt - b.importedAt);
                 break;
             case 'az':
-                cards.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                // 按卡名拼音排序（zh locale），空名称排最后
+                cards.sort((a, b) => {
+                    const an = a.name || '', bn = b.name || '';
+                    if (!an && !bn) return 0;
+                    if (!an) return 1;
+                    if (!bn) return -1;
+                    return an.localeCompare(bn, 'zh-Hans-CN');
+                });
                 break;
             case 'new':
             default:
@@ -246,8 +266,8 @@ export async function onRequestPost(context) {
         const creator = cardData.creator || '';
         const spec = cardData.spec || 'chara_card_v2';
         const character_version = cardData.character_version || '1.0';
-        const tags = cardData.tags || [];
-        const userTags = cardData.userTags || [];
+        const tags = normalizeTags(cardData.tags);
+        const userTags = normalizeTags(cardData.userTags);
         const description = truncateText(cardData.description);
         const personality = truncateText(cardData.personality);
         const scenario = truncateText(cardData.scenario);

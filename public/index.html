@@ -136,6 +136,17 @@
             box-shadow: 0 0 0 3px var(--accent-glow);
         }
 
+        /* 下拉框显式配色：color-scheme 在部分浏览器对 option 列表不生效，白底白字兜底 */
+        select.input-field {
+            background-color: var(--bg-surface);
+            color: var(--text-primary);
+        }
+
+        select.input-field option {
+            background: var(--bg-surface);
+            color: var(--text-primary);
+        }
+
         .btn {
             width: 100%;
             padding: 14px 24px;
@@ -340,10 +351,9 @@
             gap: 16px;
         }
 
-        /* 角色卡卡片 */
+        /* 角色卡卡片（不用 backdrop-filter：几十张卡逐帧模糊是列表卡顿主因） */
         .card {
             background: var(--bg-card);
-            backdrop-filter: blur(10px);
             border: 1px solid var(--border);
             border-radius: 12px;
             overflow: hidden;
@@ -398,13 +408,23 @@
             color: var(--accent);
         }
 
+        /* 自定义标签（网页里添加的）用蓝色区分 */
+        .card-tag-user {
+            background: rgba(100, 200, 255, 0.12);
+            color: #7ec8e3;
+        }
+
+        body.light-theme .card-tag-user {
+            background: rgba(29, 111, 150, 0.12);
+            color: #1d6f96;
+        }
+
         /* 列表视图卡片 */
         .card-list-item {
             display: flex;
             gap: 16px;
             padding: 16px;
             background: var(--bg-card);
-            backdrop-filter: blur(10px);
             border: 1px solid var(--border);
             border-radius: 12px;
             cursor: pointer;
@@ -1059,13 +1079,14 @@
                     <option value="old">最早上传</option>
                     <option value="az">按名称排序</option>
                 </select>
-                <select class="input-field" id="searchScope" style="width: auto; padding: 8px 12px;" title="搜索范围">
-                    <option value="all">全部字段</option>
-                    <option value="name">名称</option>
-                    <option value="creator">作者</option>
-                    <option value="description">描述</option>
-                    <option value="first_mes">开场白</option>
-                    <option value="system_prompt">系统提示词</option>
+                <select class="input-field" id="searchScope" style="width: auto; padding: 8px 12px;" title="限定搜索只匹配选中的字段">
+                    <option value="all">搜索范围：全部字段</option>
+                    <option value="name">搜索范围：名称</option>
+                    <option value="creator">搜索范围：作者</option>
+                    <option value="description">搜索范围：描述</option>
+                    <option value="first_mes">搜索范围：开场白</option>
+                    <option value="system_prompt">搜索范围：系统提示词</option>
+                    <option value="filename">搜索范围：文件名</option>
                 </select>
                 <label style="display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 14px;">
                     <input type="checkbox" id="favoriteFilter"> 仅收藏
@@ -1541,13 +1562,13 @@
                 container.innerHTML = state.cards.map((card, index) => `
                     <div class="card animate-in stagger-${(index % 4) + 1}" data-id="${card.id}">
                         ${state.selectMode ? `<label style="position:absolute;top:8px;left:8px;z-index:2;background:rgba(0,0,0,0.6);border-radius:6px;padding:6px;" onclick="event.stopPropagation()"><input type="checkbox" class="card-check" data-id="${card.id}" ${state.selectedIds.has(card.id) ? 'checked' : ''}></label>` : ''}
-                        <img class="card-image" data-card-id="${card.id}" src="${PLACEHOLDER}" alt="${esc(card.name)}" loading="lazy">
+                        <img class="card-image" data-card-id="${card.id}" src="${PLACEHOLDER}" alt="${esc(card.name)}" loading="lazy" decoding="async">
                         <div class="card-content">
                             <h3 class="card-title">${esc(card.name)}</h3>
                             <p class="card-creator">${esc(card.creator || '未知作者')}</p>
                             <div class="card-tags">
-                                ${(card.tags || []).slice(0, 3).map(tag => `
-                                    <span class="card-tag">${esc(tag)}</span>
+                                ${[...new Set([...(card.tags || []), ...(card.userTags || [])])].slice(0, 4).map(tag => `
+                                    <span class="card-tag ${(card.userTags || []).includes(tag) ? 'card-tag-user' : ''}">${esc(tag)}</span>
                                 `).join('')}
                             </div>
                         </div>
@@ -1558,13 +1579,13 @@
                 container.innerHTML = state.cards.map((card, index) => `
                     <div class="card-list-item animate-in stagger-${(index % 4) + 1}" data-id="${card.id}">
                         ${state.selectMode ? `<label style="display:flex;align-items:center;" onclick="event.stopPropagation()"><input type="checkbox" class="card-check" data-id="${card.id}" ${state.selectedIds.has(card.id) ? 'checked' : ''}></label>` : ''}
-                        <img class="card-list-image" data-card-id="${card.id}" src="${PLACEHOLDER}" alt="${esc(card.name)}" loading="lazy">
+                        <img class="card-list-image" data-card-id="${card.id}" src="${PLACEHOLDER}" alt="${esc(card.name)}" loading="lazy" decoding="async">
                         <div class="card-list-content">
                             <h3 class="card-title">${esc(card.name)}</h3>
                             <p class="card-creator">${esc(card.creator || '未知作者')}</p>
                             <div class="card-tags">
-                                ${(card.tags || []).slice(0, 5).map(tag => `
-                                    <span class="card-tag">${esc(tag)}</span>
+                                ${[...new Set([...(card.tags || []), ...(card.userTags || [])])].slice(0, 6).map(tag => `
+                                    <span class="card-tag ${(card.userTags || []).includes(tag) ? 'card-tag-user' : ''}">${esc(tag)}</span>
                                 `).join('')}
                             </div>
                         </div>
@@ -1729,7 +1750,7 @@
                 
                 document.getElementById('detailContent').innerHTML = `
                     <div class="detail-header">
-                        <img class="detail-image" data-card-id="${card.id}" src="${PLACEHOLDER}" alt="${esc(card.name)}">
+                        <img class="detail-image" data-card-id="${card.id}" src="${PLACEHOLDER}" alt="${esc(card.name)}" decoding="async">
                         <div class="detail-info">
                             <h1 class="detail-title">${esc(card.name)}</h1>
                             <p class="detail-creator">作者：${esc(card.creator || '未知')}<button class="creator-edit" onclick="editCreator()" title="编辑作者">✎</button></p>

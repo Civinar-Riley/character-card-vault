@@ -1,6 +1,7 @@
 // POST /api/import - 从备份恢复（支持全量备份 / 批量导出格式）
 
 import { uploadToTelegram } from '../../utils/telegram.js';
+import { normalizeTags } from '../cards/index.js';
 
 export async function onRequestPost(context) {
     try {
@@ -33,6 +34,8 @@ export async function onRequestPost(context) {
 
             const index = { ...card };
             delete index.fileData;
+            index.tags = normalizeTags(card.tags);
+            index.userTags = normalizeTags(card.userTags);
 
             // 仅在缺少 telegramFileId 时重新上传（同一 TG 存储恢复时旧 fileId 仍有效）
             if (!index.telegramFileId && Array.isArray(card.fileData) && card.fileData.length > 0) {
@@ -91,7 +94,7 @@ export async function onRequestPost(context) {
             const existingTags = await context.env.CARDS_KV.get('tags', { type: 'json' }) || [];
             await context.env.CARDS_KV.put('tags', JSON.stringify([...new Set([...existingTags, ...tags])]));
         }
-        const userTags = cards.flatMap(c => Array.isArray(c.userTags) ? c.userTags : []);
+        const userTags = cards.flatMap(c => normalizeTags(c.userTags));
         if (userTags.length > 0) {
             const existingTags = await context.env.CARDS_KV.get('tags', { type: 'json' }) || [];
             await context.env.CARDS_KV.put('tags', JSON.stringify([...new Set([...existingTags, ...userTags])]));
