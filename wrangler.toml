@@ -11,4 +11,4 @@ pages_build_output_dir = "./public"
 
 [[kv_namespaces]]
 binding = "CARDS_KV"
-id = "your-kv-namespace-id"
+id = "35321e7b6862452c93668f3bd34dd2c4"
