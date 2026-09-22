@@ -733,94 +733,6 @@
             margin-top: 24px;
         }
 
-        /* 聊天记录 */
-        .chat-container {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 24px;
-            margin-top: 24px;
-        }
-
-        .chat-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-
-        .chat-messages {
-            max-height: 400px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .message {
-            max-width: 80%;
-            padding: 12px 16px;
-            border-radius: 12px;
-            line-height: 1.5;
-        }
-
-        .message.user {
-            align-self: flex-end;
-            background: var(--accent);
-            color: #0a0c10;
-        }
-
-        .message.assistant {
-            align-self: flex-start;
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .message-role {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-bottom: 4px;
-        }
-
-        /* 聊天记录列表项 */
-        .chat-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin-bottom: 8px;
-            flex-wrap: wrap;
-        }
-
-        .chat-item-info {
-            flex: 1;
-            min-width: 200px;
-        }
-
-        .chat-item-title {
-            font-size: 14px;
-            font-weight: 500;
-            margin-bottom: 4px;
-        }
-
-        .chat-item-meta {
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-
-        .chat-item-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .chat-item-actions .btn {
-            width: auto;
-            padding: 6px 14px;
-            font-size: 13px;
-        }
-
         /* 批量操作栏 */
         .batch-bar {
             display: none;
@@ -1022,10 +934,6 @@
             background: rgba(250, 247, 242, 0.98);
         }
 
-        body.light-theme .message.assistant {
-            background: rgba(0, 0, 0, 0.05);
-        }
-
         body.light-theme .detail-close {
             background: rgba(0, 0, 0, 0.08);
         }
@@ -1106,9 +1014,6 @@
                 <label style="display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 14px;">
                     <input type="checkbox" id="favoriteFilter"> 仅收藏
                 </label>
-                <label style="display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 14px;">
-                    <input type="checkbox" id="chatFilter"> 有聊天记录
-                </label>
                 <button class="btn btn-secondary" id="batchModeBtn" style="width: auto; padding: 8px 16px;">多选</button>
             </div>
             <div class="toolbar-right">
@@ -1166,17 +1071,6 @@
             <div class="modal-actions">
                 <button class="btn btn-secondary" id="cancelUpload">取消</button>
                 <button class="btn" id="confirmUpload" disabled>确认导入</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 聊天记录模态框 -->
-    <div class="modal" id="chatModal">
-        <div class="modal-content" style="max-width: 700px;">
-            <h2 class="modal-title" id="chatModalTitle">聊天记录</h2>
-            <div class="chat-messages" id="chatMessages" style="max-height: 60vh; padding-right: 8px;"></div>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" id="chatModalClose">关闭</button>
             </div>
         </div>
     </div>
@@ -1253,7 +1147,6 @@
             selectedTag: null,
             sortBy: 'new',
             favoritesOnly: false,
-            hasChatOnly: false,
             selectMode: false,
             selectedIds: new Set(),
             tagManage: false,
@@ -1388,10 +1281,6 @@
                 state.favoritesOnly = true;
                 document.getElementById('favoriteFilter').checked = true;
             }
-            if (params.get('hasChat') === 'true') {
-                state.hasChatOnly = true;
-                document.getElementById('chatFilter').checked = true;
-            }
         })();
 
         // 站点自定义配置（环境变量 SITE_NAME / SITE_TITLE / SITE_BACKGROUND，公开接口）
@@ -1443,14 +1332,6 @@
         // HTML 转义
         function esc(s) {
             return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-        }
-
-        // 文件大小格式化
-        function formatSize(bytes) {
-            if (!bytes) return '';
-            if (bytes < 1024) return bytes + ' B';
-            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-            return (bytes / 1024 / 1024).toFixed(1) + ' MB';
         }
 
         // 带认证的文件下载（img/window.open 无法携带 Authorization）
@@ -1536,7 +1417,6 @@
                 }
                 if (state.selectedTag) params.append('tag', state.selectedTag);
                 if (state.favoritesOnly) params.append('favorite', 'true');
-                if (state.hasChatOnly) params.append('hasChat', 'true');
 
                 // 同步筛选状态到 URL（刷新/分享保留）
                 const qs = params.toString();
@@ -1835,20 +1715,10 @@
                             <div class="detail-section-content">${esc(typeof card.world === 'string' ? card.world : JSON.stringify(card.world, null, 2))}</div>
                         </div>
                     ` : ''}
-
-                    <div class="chat-container" id="chatSection">
-                        <div class="chat-header">
-                            <h3 class="detail-section-title" style="margin-bottom: 0;">聊天记录</h3>
-                            <input type="file" id="chatFileInput" accept=".json,.jsonl" multiple style="display: none;" onchange="uploadChat(event, '${card.id}')">
-                            <button class="btn btn-secondary" onclick="document.getElementById('chatFileInput').click()">导入聊天记录</button>
-                        </div>
-                        <div id="chatList"><p style="color: var(--text-secondary); font-size: 14px;">加载中...</p></div>
-                    </div>
                 `;
 
                 document.getElementById('detailPage').classList.add('active');
                 loadThumbs([card]);
-                loadCardChats(card.id);
             } catch (error) {
                 alert('加载详情失败: ' + error.message);
             }
@@ -1998,121 +1868,6 @@
             }
         }
 
-        // ============ 聊天记录管理 ============
-
-        // 加载卡片关联的聊天记录列表
-        async function loadCardChats(cardId) {
-            const list = document.getElementById('chatList');
-            if (!list) return;
-            try {
-                const data = await api(`/chats?cardId=${encodeURIComponent(cardId)}`);
-                if (!data.data.length) {
-                    list.innerHTML = '<p style="color: var(--text-secondary); font-size: 14px;">暂无聊天记录</p>';
-                    return;
-                }
-                list.innerHTML = data.data.map(chat => `
-                    <div class="chat-item">
-                        <div class="chat-item-info">
-                            <div class="chat-item-title">${esc(chat.title || '未命名对话')}</div>
-                            <div class="chat-item-meta">${chat.msgCount || 0} 条消息${chat.fileSize ? ' · ' + formatSize(chat.fileSize) : ''} · ${new Date(chat.importedAt).toLocaleString()}</div>
-                        </div>
-                        <div class="chat-item-actions">
-                            <button class="btn btn-secondary" onclick="viewChat('${chat.id}')">查看</button>
-                            <button class="btn btn-secondary" onclick="renameChat('${cardId}', '${chat.id}', this)" data-title="${esc(chat.title || '')}">重命名</button>
-                            <button class="btn btn-secondary" onclick="exportChat('${chat.id}')">导出</button>
-                            <button class="btn btn-secondary" onclick="deleteChat('${cardId}', '${chat.id}')">删除</button>
-                        </div>
-                    </div>
-                `).join('');
-            } catch (error) {
-                list.innerHTML = `<p style="color: var(--text-secondary); font-size: 14px;">加载失败: ${esc(error.message)}</p>`;
-            }
-        }
-
-        // 查看聊天记录
-        async function viewChat(chatId) {
-            try {
-                const data = await api(`/chats/${encodeURIComponent(chatId)}`);
-                const chat = data.data;
-                document.getElementById('chatModalTitle').textContent = chat.title || '聊天记录';
-                const box = document.getElementById('chatMessages');
-                const messages = chat.messages || [];
-                box.innerHTML = messages.length ? messages.map(m => `
-                    <div class="message ${m.role === 'user' ? 'user' : 'assistant'}">
-                        <div class="message-role">${esc(m.name || m.role || 'unknown')}</div>
-                        ${esc(typeof m.content === 'string' ? m.content : JSON.stringify(m.content))}
-                    </div>
-                `).join('') : '<p style="color: var(--text-secondary); font-size: 14px;">无消息内容</p>';
-                box.scrollTop = 0;
-                document.getElementById('chatModal').classList.add('active');
-            } catch (error) {
-                alert('加载聊天记录失败: ' + error.message);
-            }
-        }
-
-        // 删除聊天记录
-        async function deleteChat(cardId, chatId) {
-            if (!confirm('确定要删除这条聊天记录吗？')) return;
-            try {
-                await api(`/chats/${encodeURIComponent(chatId)}`, { method: 'DELETE' });
-                loadCardChats(cardId);
-            } catch (error) {
-                alert('删除失败: ' + error.message);
-            }
-        }
-
-        // 导出聊天记录
-        function exportChat(chatId) {
-            authDownload(`${API_BASE}/chats/${encodeURIComponent(chatId)}/export`, `${chatId}.jsonl`)
-                .catch(error => alert('导出失败: ' + error.message));
-        }
-
-        // 导入聊天记录（支持多文件，重复内容自动跳过）
-        async function uploadChat(event, cardId) {
-            const files = Array.from(event.target.files || []);
-            if (!files.length) return;
-            let ok = 0, dup = 0;
-            const failed = [];
-            for (const file of files) {
-                try {
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    formData.append('cardId', cardId);
-                    await api('/chats', { method: 'POST', body: formData });
-                    ok++;
-                } catch (error) {
-                    if (/已存在/.test(error.message)) {
-                        dup++;
-                    } else {
-                        failed.push(`${file.name}（${error.message}）`);
-                    }
-                }
-            }
-            const parts = [`成功 ${ok}`, `重复跳过 ${dup}`];
-            if (failed.length) parts.push(`失败 ${failed.length}：${failed.join('；')}`);
-            alert(`聊天记录导入完成：${parts.join('，')}`);
-            loadCardChats(cardId);
-            event.target.value = '';
-        }
-
-        // 重命名聊天记录
-        async function renameChat(cardId, chatId, btn) {
-            const current = btn ? (btn.getAttribute('data-title') || '') : '';
-            const newTitle = prompt('重命名聊天记录：', current);
-            if (newTitle === null) return;
-            const title = newTitle.trim();
-            if (!title) return alert('标题不能为空');
-            try {
-                await api(`/chats/${encodeURIComponent(chatId)}`, {
-                    method: 'PUT',
-                    body: { title }
-                });
-                loadCardChats(cardId);
-            } catch (error) {
-                alert('重命名失败: ' + error.message);
-            }
-        }
-
         // ============ 批量操作 ============
 
         async function batchFavorite() {
@@ -2197,7 +1952,7 @@
                     body: JSON.parse(text)
                 });
                 const r = data.data;
-                alert(`恢复完成：导入 ${r.importedCards} 张角色卡（跳过 ${r.skippedCards} 张），导入 ${r.importedChats} 条聊天记录（跳过 ${r.skippedChats} 条）`);
+                alert(`恢复完成：导入 ${r.importedCards} 张角色卡（跳过 ${r.skippedCards} 张）`);
                 loadCards();
                 loadTags();
             } catch (error) {
@@ -2245,12 +2000,6 @@
             loadCards();
         });
 
-        // 聊天记录筛选
-        document.getElementById('chatFilter').addEventListener('change', (e) => {
-            state.hasChatOnly = e.target.checked;
-            loadCards();
-        });
-
         // 主题切换（与设置面板同步）
         document.getElementById('themeToggle').addEventListener('click', () => {
             settings.theme = document.body.classList.contains('light-theme') ? 'dark' : 'light';
@@ -2270,11 +2019,6 @@
         document.getElementById('batchUnfavorite').addEventListener('click', batchUnfavorite);
         document.getElementById('batchDelete').addEventListener('click', batchDelete);
         document.getElementById('batchExport').addEventListener('click', batchExport);
-
-        // 聊天记录模态框关闭
-        document.getElementById('chatModalClose').addEventListener('click', () => {
-            document.getElementById('chatModal').classList.remove('active');
-        });
 
         // 搜索清除
         const searchInput = document.getElementById('searchInput');

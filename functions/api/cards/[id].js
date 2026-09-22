@@ -105,19 +105,6 @@ export async function onRequestDelete(context) {
             await deleteTelegramMessage(tgBotToken, tgChatId, card.telegramMessageId);
         }
 
-        // 删除关联的聊天记录
-        const chatList = await context.env.CARDS_KV.list({ prefix: 'chat:' });
-        for (const chatKey of chatList.keys) {
-            const chat = await context.env.CARDS_KV.get(chatKey.name, { type: 'json' });
-            if (chat && chat.cardId === id) {
-                // 删除聊天记录文件
-                if (tgBotToken && tgChatId && chat.telegramMessageId) {
-                    await deleteTelegramMessage(tgBotToken, tgChatId, chat.telegramMessageId);
-                }
-                await context.env.CARDS_KV.delete(chatKey.name);
-            }
-        }
-
         // 删除 KV 索引
         await context.env.CARDS_KV.delete(`card:${id}`);
 

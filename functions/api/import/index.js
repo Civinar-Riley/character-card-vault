@@ -19,11 +19,9 @@ export async function onRequestPost(context) {
         // 兼容全量备份文件（{ok, data:{...}} 包裹）和批量导出（{cards:[...]}）
         const payload = body.data && typeof body.data === 'object' && !Array.isArray(body.data) ? body.data : body;
         const cards = Array.isArray(payload.cards) ? payload.cards : [];
-        const chats = Array.isArray(payload.chats) ? payload.chats : [];
         const tags = Array.isArray(payload.tags) ? payload.tags : [];
 
         let importedCards = 0, skippedCards = 0;
-        let importedChats = 0, skippedChats = 0;
 
         for (const card of cards) {
             if (!card || !card.id) continue;
@@ -55,40 +53,6 @@ export async function onRequestPost(context) {
             importedCards++;
         }
 
-        for (const chat of chats) {
-            if (!chat || !chat.id || !chat.cardId) continue;
-            const key = `chat:${chat.cardId}:${chat.id}`;
-            if (await context.env.CARDS_KV.get(key)) {
-                skippedChats++;
-                continue;
-            }
-
-            const index = { ...chat };
-            delete index.messages;
-
-            if (Array.isArray(chat.messages)) {
-                index.msgCount = chat.messages.length;
-            }
-
-            // 仅在缺少 telegramFileId 时重新上传消息
-            if (!index.telegramFileId && Array.isArray(chat.messages) && chat.messages.length > 0) {
-                const jsonlContent = chat.messages.map(m => JSON.stringify(m)).join('\n');
-                const upload = await uploadToTelegram(
-                    tgBotToken, tgChatId,
-                    new File([jsonlContent], `${chat.id}.jsonl`, { type: 'application/jsonl' }),
-                    `聊天记录恢复: ${chat.title || ''}`
-                );
-                index.telegramFileId = upload.fileId;
-                index.telegramFileName = upload.fileName;
-                index.telegramMessageId = upload.messageId;
-                index.fileSize = new TextEncoder().encode(jsonlContent).length;
-                index.msgCount = chat.messages.length;
-            }
-
-            await context.env.CARDS_KV.put(key, JSON.stringify(index));
-            importedChats++;
-        }
-
         // 合并标签（含卡片自定义标签）
         if (tags.length > 0) {
             const existingTags = await context.env.CARDS_KV.get('tags', { type: 'json' }) || [];
@@ -102,7 +66,7 @@ export async function onRequestPost(context) {
 
         return new Response(JSON.stringify({
             ok: true,
-            data: { importedCards, skippedCards, importedChats, skippedChats }
+            data: { importedCards, skippedCards }
         }), {
             headers: { 'Content-Type': 'application/json' }
         });

@@ -82,7 +82,6 @@ export async function onRequestGet(context) {
         const tag = url.searchParams.get('tag');
         const creator = url.searchParams.get('creator');
         const favorite = url.searchParams.get('favorite') === 'true';
-        const hasChat = url.searchParams.get('hasChat') === 'true';
         const q = url.searchParams.get('q');
         const scope = url.searchParams.get('scope') || 'all';
 
@@ -102,17 +101,6 @@ export async function onRequestGet(context) {
         }
         if (favorite) {
             cards = cards.filter(c => c.favorited);
-        }
-        if (hasChat) {
-            const chatList = await context.env.CARDS_KV.list({ prefix: 'chat:' });
-            const cardIdsWithChat = new Set();
-            for (const chatKey of chatList.keys) {
-                const chat = await context.env.CARDS_KV.get(chatKey.name, { type: 'json' });
-                if (chat && chat.cardId) {
-                    cardIdsWithChat.add(chat.cardId);
-                }
-            }
-            cards = cards.filter(c => cardIdsWithChat.has(c.id));
         }
         if (q) {
             const query = q.toLowerCase();
