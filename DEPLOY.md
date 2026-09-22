@@ -39,9 +39,21 @@
 5. 配置：
    - **命名空间名称**：`character-cards-kv`
 6. 点击 **添加命名空间**
-7. 记录 **命名空间 ID**（一串字母数字），后续配置需要
+7. 记录 **命名空间 ID**（一串 32 位十六进制字符），后续配置需要
 
-### 3. 连接 GitHub 仓库
+### 3. 修改 wrangler.toml 中的 KV ID（Fork 后必改）
+
+仓库的 `wrangler.toml` 声明了 KV 绑定，**部署时会使用文件里的 ID**——不改成自己的，部署会报错 `Invalid KV namespace ID`：
+
+1. 打开你 Fork 的仓库页面，进入 `wrangler.toml`
+2. 点击 ✏️ 编辑，将：
+   ```toml
+   id = "your-kv-namespace-id"
+   ```
+   替换为步骤 2 记录的**你自己的命名空间 ID**
+3. 点击 **Commit changes**（直接提交到 main 分支）
+
+### 4. 连接 GitHub 仓库
 
 1. 在 Cloudflare 控制台左侧菜单选择 **Workers 和 Pages**
 2. 点击 **创建应用程序**
@@ -56,7 +68,7 @@
 8. 点击 **保存并部署**
 9. 等待部署完成（约 1-2 分钟）
 
-### 4. 设置环境变量
+### 5. 设置环境变量
 
 1. 进入刚创建的 Pages 项目
 2. 点击 **设置** 标签
@@ -72,23 +84,19 @@
    - `SITE_BACKGROUND`：背景图 URL
 7. 点击 **保存**
 
-### 5. 绑定 KV 命名空间
+### 6. KV 绑定说明
 
-1. 在 Pages 项目页面，点击 **设置** 标签
-2. 左侧选择 **集成**
-3. 找到 **KV 命名空间绑定** 部分，点击 **添加绑定**
-4. 配置：
-   - **KV 命名空间**：选择 `character-cards-kv`
-   - **变量名称**：`CARDS_KV`
-5. 点击 **添加绑定**
+KV 绑定已由仓库的 `wrangler.toml` 声明（步骤 3 中你替换的 ID），**无需在 Dashboard 再手动绑定**。如需检查，可到 **设置 → 函数 → KV 命名空间绑定** 确认绑定名为 `CARDS_KV`。
 
-### 6. 重新部署
+> 注意：由于 `wrangler.toml` 是部署配置源，请勿在 Dashboard 添加与配置文件冲突的绑定。
+
+### 7. 重新部署
 
 1. 回到 Pages 项目概览页
 2. 点击 **重试部署** 或等待自动重新部署
 3. 部署完成后，点击 **访问站点** 访问你的角色卡仓库
 
-### 7. 首次访问
+### 8. 首次访问
 
 1. 打开部署后的网站
 2. 输入你设置的访问密码
@@ -180,6 +188,10 @@ wrangler pages deploy public
 - 原因：Telegram Bot API 限制每频道约每分钟 20 条消息，一次上传太多会被限流
 - 解决：一次上传不要超过 20 张，分批进行；单张失败会自动等待 15 秒重试一次
 
+**Q2.7: 部署失败，提示 "Invalid KV namespace ID"**
+- 原因：Fork 后没有把 `wrangler.toml` 中的 KV 命名空间 ID 替换成自己的（仓库里的 ID 属于原作者账号）
+- 解决：按步骤 3 修改 `wrangler.toml` 中的 `id` 为你自己的 KV 命名空间 ID，重新部署
+
 **Q3: 图片无法显示**
 - 原因：Telegram Bot 不是频道管理员，或 Chat ID 错误
 - 解决：确保 Bot 已添加为频道管理员，且 Chat ID 正确
@@ -205,6 +217,7 @@ wrangler pages deploy public
 - [ ] 频道 Chat ID 已获取（格式为 `-100` 开头）
 - [ ] 仓库已 Fork 到 GitHub
 - [ ] KV 命名空间已创建
+- [ ] **`wrangler.toml` 中的 KV ID 已替换为自己的**（Fork 后必改）
 - [ ] GitHub 仓库已连接到 Cloudflare Pages
 - [ ] 环境变量 `ACCESS_PASSWORD` 已设置
 - [ ] 环境变量 `TG_BOT_TOKEN` 已设置

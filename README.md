@@ -43,10 +43,12 @@
 
 1. 创建 Telegram Bot（通过 @BotFather）
 2. 创建 Telegram 频道并将 Bot 设为管理员
-3. Fork 本仓库到 GitHub
-4. 在 Cloudflare Pages 连接仓库并部署
-5. 设置环境变量：`ACCESS_PASSWORD`、`TG_BOT_TOKEN`、`TG_CHAT_ID`
-6. 绑定 KV 命名空间
+3. 创建 KV 命名空间并复制其 ID
+4. Fork 本仓库到 GitHub，**将 `wrangler.toml` 中的 KV 命名空间 ID 替换为你自己的**
+5. 在 Cloudflare Pages 连接仓库并部署
+6. 设置环境变量：`ACCESS_PASSWORD`、`TG_BOT_TOKEN`、`TG_CHAT_ID`
+
+> KV ID 属于你的 Cloudflare 账号，不改的话部署会报 `Invalid KV namespace ID`。详见 [DEPLOY.md](DEPLOY.md)。
 
 详细步骤请查看 [DEPLOY.md](DEPLOY.md)
 
