@@ -1,27 +1,37 @@
 // GET /api/cards/:id/download - 下载原始文件
 
+import { downloadFromTelegram } from '../../../utils/telegram.js';
+
 export async function onRequestGet(context) {
     try {
         const id = context.params.id;
         const card = await context.env.CARDS_KV.get(`card:${id}`, { type: 'json' });
 
-        if (!card || !card.r2Key) {
+        if (!card || !card.telegramFileId) {
             return new Response(JSON.stringify({ ok: false, error: '文件不存在' }), {
                 status: 404,
                 headers: { 'Content-Type': 'application/json' }
             });
         }
 
-        const file = await context.env.CARDS_BUCKET.get(card.r2Key);
-
-        if (!file) {
-            return new Response(JSON.stringify({ ok: false, error: '文件不存在' }), {
-                status: 404,
+        const tgBotToken = context.env.TG_BOT_TOKEN;
+        if (!tgBotToken) {
+            return new Response(JSON.stringify({ ok: false, error: 'Telegram 配置未设置' }), {
+                status: 500,
                 headers: { 'Content-Type': 'application/json' }
             });
         }
 
-        return new Response(file.body, {
+        const response = await downloadFromTelegram(tgBotToken, card.telegramFileId);
+
+        if (!response.ok) {
+            return new Response(JSON.stringify({ ok: false, error: '下载文件失败' }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        return new Response(response.body, {
             headers: {
                 'Content-Type': 'image/png',
                 'Content-Disposition': `attachment; filename="${card.name || 'character'}.png"`

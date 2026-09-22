@@ -1,39 +1,29 @@
 // GET /api/cards/:id/thumb - 获取缩略图
 
+import { getTelegramFileUrl } from '../../../utils/telegram.js';
+
 export async function onRequestGet(context) {
     try {
         const id = context.params.id;
         const card = await context.env.CARDS_KV.get(`card:${id}`, { type: 'json' });
 
-        if (!card || !card.thumbKey) {
-            // 如果没有缩略图，返回原图
-            if (card && card.r2Key) {
-                const file = await context.env.CARDS_BUCKET.get(card.r2Key);
-                if (file) {
-                    return new Response(file.body, {
-                        headers: { 'Content-Type': 'image/png' }
-                    });
-                }
-            }
+        if (!card || !card.telegramFileId) {
             return new Response(null, { status: 404 });
         }
 
-        const thumb = await context.env.CARDS_BUCKET.get(card.thumbKey);
-
-        if (!thumb) {
-            // 如果缩略图不存在，返回原图
-            if (card.r2Key) {
-                const file = await context.env.CARDS_BUCKET.get(card.r2Key);
-                if (file) {
-                    return new Response(file.body, {
-                        headers: { 'Content-Type': 'image/png' }
-                    });
-                }
-            }
-            return new Response(null, { status: 404 });
+        const tgBotToken = context.env.TG_BOT_TOKEN;
+        if (!tgBotToken) {
+            return new Response(null, { status: 500 });
         }
 
-        return new Response(thumb.body, {
+        const fileUrl = await getTelegramFileUrl(tgBotToken, card.telegramFileId);
+        const response = await fetch(fileUrl);
+
+        if (!response.ok) {
+            return new Response(null, { status: 500 });
+        }
+
+        return new Response(response.body, {
             headers: { 'Content-Type': 'image/png' }
         });
     } catch (error) {

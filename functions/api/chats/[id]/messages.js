@@ -1,5 +1,7 @@
 // PUT /api/chats/:id/messages - 更新单条消息
 
+import { downloadFromTelegram, uploadToTelegram } from '../../../utils/telegram.js';
+
 export async function onRequestPut(context) {
     try {
         const id = context.params.id;
@@ -13,7 +15,6 @@ export async function onRequestPut(context) {
             });
         }
 
-        // 查找聊天记录
         const chatList = await context.env.CARDS_KV.list({ prefix: 'chat:' });
         let chatKey = null;
         let chatIndex = null;
@@ -34,22 +35,29 @@ export async function onRequestPut(context) {
             });
         }
 
-        // 获取当前消息
+        // 从 Telegram 获取当前消息
         let messages = [];
-        if (chatIndex.r2Key) {
-            const file = await context.env.CARDS_BUCKET.get(chatIndex.r2Key);
-            if (file) {
-                const text = await file.text();
-                messages = text.split('\n')
-                    .filter(line => line.trim())
-                    .map(line => {
-                        try {
-                            return JSON.parse(line);
-                        } catch (e) {
-                            return null;
-                        }
-                    })
-                    .filter(Boolean);
+        if (chatIndex.telegramFileId) {
+            const tgBotToken = context.env.TG_BOT_TOKEN;
+            if (tgBotToken) {
+                try {
+                    const response = await downloadFromTelegram(tgBotToken, chatIndex.telegramFileId);
+                    if (response.ok) {
+                        const text = await response.text();
+                        messages = text.split('\n')
+                            .filter(line => line.trim())
+                            .map(line => {
+                                try {
+                                    return JSON.parse(line);
+                                } catch (e) {
+                                    return null;
+                                }
+                            })
+                            .filter(Boolean);
+                    }
+                } catch (error) {
+                    console.error('Failed to download chat from Telegram:', error);
+                }
             }
         }
 
@@ -63,14 +71,28 @@ export async function onRequestPut(context) {
             });
         }
 
-        // 保存更新
-        const jsonlContent = messages.map(m => JSON.stringify(m)).join('\n');
-        await context.env.CARDS_BUCKET.put(chatIndex.r2Key, jsonlContent, {
-            httpMetadata: { contentType: 'application/jsonl' }
-        });
+        // 重新上传到 Telegram
+        const tgBotToken = context.env.TG_BOT_TOKEN;
+        const tgChatId = context.env.TG_CHAT_ID;
 
-        chatIndex.fileSize = new TextEncoder().encode(jsonlContent).length;
-        await context.env.CARDS_KV.put(chatKey, JSON.stringify(chatIndex));
+        if (tgBotToken && tgChatId) {
+            const jsonlContent = messages.map(m => JSON.stringify(m)).join('\n');
+            const chatFile = new File([jsonlContent], `${chatIndex.id}.jsonl`, { type: 'application/jsonl' });
+            
+            const uploadResult = await uploadToTelegram(
+                tgBotToken,
+                tgChatId,
+                chatFile,
+                `聊天记录更新: ${chatIndex.title}`
+            );
+
+            chatIndex.telegramFileId = uploadResult.fileId;
+            chatIndex.telegramFileName = uploadResult.fileName;
+            chatIndex.telegramMessageId = uploadResult.messageId;
+            chatIndex.fileSize = new TextEncoder().encode(jsonlContent).length;
+            
+            await context.env.CARDS_KV.put(chatKey, JSON.stringify(chatIndex));
+        }
 
         return new Response(JSON.stringify({ ok: true }), {
             headers: { 'Content-Type': 'application/json' }

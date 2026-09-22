@@ -19,7 +19,7 @@ export async function onRequestGet(context) {
             ok: true,
             data: {
                 ...card,
-                thumbUrl: card.thumbKey ? `${baseUrl}/api/cards/${card.id}/thumb` : null,
+                thumbUrl: card.telegramFileId ? `${baseUrl}/api/cards/${card.id}/thumb` : null,
                 fileUrl: `${baseUrl}/api/cards/${card.id}/download`
             }
         }), {
@@ -47,15 +47,12 @@ export async function onRequestPut(context) {
 
         const body = await context.request.json();
         
-        // 更新允许的字段
         if (body.tags !== undefined) card.tags = body.tags;
         if (body.userTags !== undefined) card.userTags = body.userTags;
         if (body.favorited !== undefined) card.favorited = body.favorited;
 
-        // 保存更新
         await context.env.CARDS_KV.put(`card:${id}`, JSON.stringify(card));
 
-        // 更新标签索引
         if (body.tags !== undefined) {
             const allCards = [];
             const listResult = await context.env.CARDS_KV.list({ prefix: 'card:' });
@@ -94,26 +91,15 @@ export async function onRequestDelete(context) {
             });
         }
 
-        // 删除 R2 文件
-        if (card.r2Key) {
-            await context.env.CARDS_BUCKET.delete(card.r2Key);
-        }
-        if (card.thumbKey) {
-            await context.env.CARDS_BUCKET.delete(card.thumbKey);
-        }
+        // 注意：Telegram 文件无法通过 API 删除，这里只删除 KV 索引
+        // Telegram 频道中的文件可以手动清理或保留
 
-        // 删除 KV 索引
         await context.env.CARDS_KV.delete(`card:${id}`);
 
-        // 删除关联的聊天记录
         const chatList = await context.env.CARDS_KV.list({ prefix: 'chat:' });
         for (const chatKey of chatList.keys) {
             const chat = await context.env.CARDS_KV.get(chatKey.name, { type: 'json' });
             if (chat && chat.cardId === id) {
-                // 删除 R2 中的聊天文件
-                if (chat.r2Key) {
-                    await context.env.CARDS_BUCKET.delete(chat.r2Key);
-                }
                 await context.env.CARDS_KV.delete(chatKey.name);
             }
         }

@@ -1,5 +1,7 @@
 // POST /api/export/batch - 批量导出
 
+import { downloadFromTelegram } from '../../utils/telegram.js';
+
 export async function onRequestPost(context) {
     try {
         const body = await context.request.json();
@@ -12,6 +14,8 @@ export async function onRequestPost(context) {
             });
         }
 
+        const tgBotToken = context.env.TG_BOT_TOKEN;
+
         const exportData = {
             version: '1.0',
             exportDate: new Date().toISOString(),
@@ -21,13 +25,18 @@ export async function onRequestPost(context) {
         for (const id of cardIds) {
             const card = await context.env.CARDS_KV.get(`card:${id}`, { type: 'json' });
             if (card) {
-                // 获取原始文件
                 let fileData = null;
-                if (card.r2Key) {
-                    const file = await context.env.CARDS_BUCKET.get(card.r2Key);
-                    if (file) {
-                        const buffer = await file.arrayBuffer();
-                        fileData = Array.from(new Uint8Array(buffer));
+                
+                // 从 Telegram 下载文件
+                if (card.telegramFileId && tgBotToken) {
+                    try {
+                        const response = await downloadFromTelegram(tgBotToken, card.telegramFileId);
+                        if (response.ok) {
+                            const buffer = await response.arrayBuffer();
+                            fileData = Array.from(new Uint8Array(buffer));
+                        }
+                    } catch (error) {
+                        console.error(`Failed to download card ${id} from Telegram:`, error);
                     }
                 }
 
@@ -38,7 +47,6 @@ export async function onRequestPost(context) {
             }
         }
 
-        // 返回 JSON 数据（前端可以转换为文件下载）
         return new Response(JSON.stringify({ ok: true, data: exportData }), {
             headers: {
                 'Content-Type': 'application/json',

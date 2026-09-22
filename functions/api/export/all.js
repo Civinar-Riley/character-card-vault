@@ -1,7 +1,11 @@
 // POST /api/export/all - 全量备份
 
+import { downloadFromTelegram } from '../../utils/telegram.js';
+
 export async function onRequestPost(context) {
     try {
+        const tgBotToken = context.env.TG_BOT_TOKEN;
+
         const exportData = {
             version: '1.0',
             exportDate: new Date().toISOString(),
@@ -15,13 +19,17 @@ export async function onRequestPost(context) {
         for (const key of cardList.keys) {
             const card = await context.env.CARDS_KV.get(key.name, { type: 'json' });
             if (card) {
-                // 获取原始文件
                 let fileData = null;
-                if (card.r2Key) {
-                    const file = await context.env.CARDS_BUCKET.get(card.r2Key);
-                    if (file) {
-                        const buffer = await file.arrayBuffer();
-                        fileData = Array.from(new Uint8Array(buffer));
+                
+                if (card.telegramFileId && tgBotToken) {
+                    try {
+                        const response = await downloadFromTelegram(tgBotToken, card.telegramFileId);
+                        if (response.ok) {
+                            const buffer = await response.arrayBuffer();
+                            fileData = Array.from(new Uint8Array(buffer));
+                        }
+                    } catch (error) {
+                        console.error(`Failed to download card from Telegram:`, error);
                     }
                 }
 
@@ -37,22 +45,26 @@ export async function onRequestPost(context) {
         for (const key of chatList.keys) {
             const chat = await context.env.CARDS_KV.get(key.name, { type: 'json' });
             if (chat) {
-                // 获取聊天内容
                 let messages = [];
-                if (chat.r2Key) {
-                    const file = await context.env.CARDS_BUCKET.get(chat.r2Key);
-                    if (file) {
-                        const text = await file.text();
-                        messages = text.split('\n')
-                            .filter(line => line.trim())
-                            .map(line => {
-                                try {
-                                    return JSON.parse(line);
-                                } catch (e) {
-                                    return null;
-                                }
-                            })
-                            .filter(Boolean);
+                
+                if (chat.telegramFileId && tgBotToken) {
+                    try {
+                        const response = await downloadFromTelegram(tgBotToken, chat.telegramFileId);
+                        if (response.ok) {
+                            const text = await response.text();
+                            messages = text.split('\n')
+                                .filter(line => line.trim())
+                                .map(line => {
+                                    try {
+                                        return JSON.parse(line);
+                                    } catch (e) {
+                                        return null;
+                                    }
+                                })
+                                .filter(Boolean);
+                        }
+                    } catch (error) {
+                        console.error(`Failed to download chat from Telegram:`, error);
                     }
                 }
 
@@ -63,11 +75,9 @@ export async function onRequestPost(context) {
             }
         }
 
-        // 导出标签
         const tags = await context.env.CARDS_KV.get('tags', { type: 'json' }) || [];
         exportData.tags = tags;
 
-        // 返回 JSON 数据
         return new Response(JSON.stringify({ ok: true, data: exportData }), {
             headers: {
                 'Content-Type': 'application/json',

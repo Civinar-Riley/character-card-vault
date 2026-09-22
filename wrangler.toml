@@ -3,11 +3,10 @@ compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-# ACCESS_PASSWORD = "your-password-here"  # 部署时在 Cloudflare Dashboard 设置
-
-[[r2_buckets]]
-binding = "CARDS_BUCKET"
-bucket_name = "character-cards"
+# 以下变量在 Cloudflare Dashboard 的 Settings > Environment variables 中设置
+# ACCESS_PASSWORD = "your-password-here"      # 访问密码
+# TG_BOT_TOKEN = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"  # Telegram Bot Token
+# TG_CHAT_ID = "-1001234567890"               # Telegram 频道 ID
 
 [[kv_namespaces]]
 binding = "CARDS_KV"
