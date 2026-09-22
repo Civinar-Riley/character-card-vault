@@ -12,5 +12,4 @@ compatibility_flags = ["nodejs_compat"]
 binding = "CARDS_KV"
 id = "your-kv-namespace-id"
 
-[site]
-bucket = "./public"
+pages_build_output_dir = "./public"
