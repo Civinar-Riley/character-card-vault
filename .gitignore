@@ -31,5 +31,8 @@ build/
 # 开发文档
 计划.md
 
+# 本地参考资料（SillyTavern 接口定义，不推送）
+接口定义/
+
 # 开发工具配置
 opencode.json
