@@ -2070,11 +2070,27 @@
         });
 
         // 上传功能
-        document.getElementById('importBtn').addEventListener('click', () => {
+        // 拖拽区初始 HTML（选中文件后会被整体替换，重开弹窗时用它还原）
+        const UPLOAD_ZONE_HTML = `
+                <div class="upload-icon">📁</div>
+                <p class="upload-text">拖拽文件到此处，或点击选择</p>
+                <p class="upload-hint">支持 PNG / JSON 格式，单个最大 50MB</p>
+                <p class="upload-hint" style="color: var(--accent);">⚠️ Telegram 限流：一次不要上传超过 20 张，否则会被限流失败</p>
+            `;
+
+        // 重置上传弹窗到初始状态（每次打开都调用，防止残留上一批的选择）
+        function resetUploadModal() {
+            selectedFiles = [];
+            document.getElementById('fileInput').value = '';
+            document.getElementById('uploadZone').innerHTML = UPLOAD_ZONE_HTML;
             document.getElementById('progressBar').style.display = 'none';
             document.getElementById('uploadStatus').style.display = 'none';
             document.getElementById('progressFill').style.width = '0%';
-            document.getElementById('confirmUpload').disabled = selectedFiles.length === 0;
+            document.getElementById('confirmUpload').disabled = true;
+        }
+
+        document.getElementById('importBtn').addEventListener('click', () => {
+            resetUploadModal();
             document.getElementById('uploadModal').classList.add('active');
         });
 
@@ -2103,15 +2119,16 @@
 
         document.getElementById('fileInput').addEventListener('change', (e) => {
             handleFiles(e.target.files);
+            e.target.value = '';
         });
 
         let selectedFiles = [];
 
         function handleFiles(files) {
-            selectedFiles = Array.from(files).filter(f => 
+            selectedFiles = Array.from(files).filter(f =>
                 f.type === 'image/png' || f.name.endsWith('.json')
             );
-            
+
             if (selectedFiles.length > 0) {
                 document.getElementById('confirmUpload').disabled = false;
                 document.getElementById('uploadZone').innerHTML = `
@@ -2119,6 +2136,11 @@
                     <p class="upload-text">已选择 ${selectedFiles.length} 个文件</p>
                     <p class="upload-hint">${selectedFiles.map(f => f.name).join(', ')}</p>
                 `;
+            } else {
+                // 没有有效文件（如误选了其他格式）：恢复拖拽区并禁用确认，防止残留旧选择
+                selectedFiles = [];
+                document.getElementById('uploadZone').innerHTML = UPLOAD_ZONE_HTML;
+                document.getElementById('confirmUpload').disabled = true;
             }
         }
 
