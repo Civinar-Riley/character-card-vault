@@ -419,6 +419,21 @@
             color: #1d6f96;
         }
 
+        /* 自定义标签上的单个移除按钮 */
+        .tag-remove {
+            background: none;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 0 0 0 4px;
+            line-height: 1;
+        }
+
+        .tag-remove:hover {
+            color: #ff6b6b;
+        }
+
         /* 列表视图卡片 */
         .card-list-item {
             display: flex;
@@ -1753,14 +1768,15 @@
                         <img class="detail-image" data-card-id="${card.id}" src="${PLACEHOLDER}" alt="${esc(card.name)}" decoding="async">
                         <div class="detail-info">
                             <h1 class="detail-title">${esc(card.name)}</h1>
-                            <p class="detail-creator">作者：${esc(card.creator || '未知')}<button class="creator-edit" onclick="editCreator()" title="编辑作者">✎</button></p>
+                            <p class="detail-creator">作者：${esc(card.creator || '未知')}<button class="creator-edit" onclick="editCreator()" title="编辑作者">✎</button>${card.creator !== '西维纳尔' ? `<button class="creator-edit" onclick="setCreator('西维纳尔')" title="一键设为西维纳尔">西维纳尔</button>` : ''}</p>
                             <div class="card-tags" style="margin-bottom: 16px;">
                                 ${(card.tags || []).map(tag => `
                                     <span class="card-tag">${esc(tag)}</span>
                                 `).join('')}
-                                ${(card.userTags || []).map(tag => `
-                                    <span class="card-tag" style="background: rgba(100, 200, 255, 0.1); color: #7ec8e3;">${esc(tag)}</span>
+                                ${(card.userTags || []).map((tag, i) => `
+                                    <span class="card-tag card-tag-user">${esc(tag)}<button class="tag-remove" onclick="removeUserTag(${i})" title="移除该标签">×</button></span>
                                 `).join('')}
+                                ${!(card.userTags || []).includes('已发布') ? `<button class="creator-edit" onclick="addUserTag('已发布')" title="一键添加标签">已发布</button>` : ''}
                                 <button class="creator-edit" onclick="editUserTags()" title="编辑自定义标签">＋标签</button>
                             </div>
                             <div class="detail-actions">
@@ -1863,6 +1879,55 @@
                 alert('保存失败: ' + error.message);
             }
         });
+
+        // 一键设置预制作者
+        async function setCreator(name) {
+            if (!currentCard) return;
+            try {
+                await api(`/cards/${currentCard.id}`, {
+                    method: 'PUT',
+                    body: { creator: name }
+                });
+                showDetail(currentCard.id);
+                loadCards(state.currentPage);
+            } catch (error) {
+                alert('设置失败: ' + error.message);
+            }
+        }
+
+        // 添加单个自定义标签（预制"已发布"等）
+        async function addUserTag(tag) {
+            if (!currentCard) return;
+            const userTags = [...new Set([...(currentCard.userTags || []), tag])];
+            try {
+                await api(`/cards/${currentCard.id}`, {
+                    method: 'PUT',
+                    body: { userTags }
+                });
+                showDetail(currentCard.id);
+                loadCards(state.currentPage);
+                loadTags();
+            } catch (error) {
+                alert('添加失败: ' + error.message);
+            }
+        }
+
+        // 单独移除一个自定义标签
+        async function removeUserTag(index) {
+            if (!currentCard) return;
+            const userTags = (currentCard.userTags || []).filter((_, i) => i !== index);
+            try {
+                await api(`/cards/${currentCard.id}`, {
+                    method: 'PUT',
+                    body: { userTags }
+                });
+                showDetail(currentCard.id);
+                loadCards(state.currentPage);
+                loadTags();
+            } catch (error) {
+                alert('移除失败: ' + error.message);
+            }
+        }
 
         // 编辑自定义标签（userTags，逗号分隔）
         async function editUserTags() {
