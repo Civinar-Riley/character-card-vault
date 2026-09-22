@@ -20,26 +20,16 @@
 - **存储**：Telegram Bot API (文件) + Cloudflare KV (元数据)
 - **认证**：环境变量密码认证
 
-## 部署步骤
+## 快速部署
 
-### 准备工作
+1. 创建 Telegram Bot（通过 @BotFather）
+2. 创建 Telegram 频道并将 Bot 设为管理员
+3. Fork 本仓库到 GitHub
+4. 在 Cloudflare Pages 连接仓库并部署
+5. 设置环境变量：`ACCESS_PASSWORD`、`TG_BOT_TOKEN`、`TG_CHAT_ID`
+6. 绑定 KV 命名空间
 
-1. 注册 [Cloudflare](https://dash.cloudflare.com) 账号
-2. 创建 Telegram Bot（通过 @BotFather）
-3. 创建 Telegram 频道并将 Bot 设为管理员
-
-### 部署到 Cloudflare Pages
-
-1. Fork 本仓库到 GitHub
-2. 在 Cloudflare 控制台连接 GitHub 仓库到 Pages
-3. 设置环境变量：
-   - `ACCESS_PASSWORD`：访问密码
-   - `TG_BOT_TOKEN`：Telegram Bot Token
-   - `TG_CHAT_ID`：Telegram 频道 Chat ID
-4. 绑定 KV 命名空间
-5. 部署
-
-详细步骤请参考 `计划.md` 中的部署指南。
+详细步骤请查看 [DEPLOY.md](DEPLOY.md)
 
 ## 环境变量
 
@@ -137,7 +127,7 @@ character-card-vault/
 │           └── all.js                 # 全量备份
 ├── public/
 │   └── index.html                     # 前端单页应用
-├── opencode.json                      # OpenCode 配置
+├── DEPLOY.md                          # 部署指南
 ├── .gitignore
 ├── README.md
 └── LICENSE                            # CC BY-NC-SA 4.0
