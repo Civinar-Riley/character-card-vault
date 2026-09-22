@@ -514,6 +514,22 @@
             margin-bottom: 16px;
         }
 
+        .creator-edit {
+            background: none;
+            border: none;
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 13px;
+            margin-left: 6px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: var(--transition-fast);
+        }
+
+        .creator-edit:hover {
+            background: var(--accent-glow);
+        }
+
         .detail-section {
             margin-bottom: 24px;
         }
@@ -1056,6 +1072,9 @@
             tagManage: false
         };
 
+        // 当前查看详情的角色卡
+        let currentCard = null;
+
         // API 基础 URL
         const API_BASE = '/api';
 
@@ -1392,13 +1411,14 @@
             try {
                 const data = await api(`/cards/${id}`);
                 const card = data.data;
+                currentCard = card;
                 
                 document.getElementById('detailContent').innerHTML = `
                     <div class="detail-header">
                         <img class="detail-image" data-card-id="${card.id}" src="/placeholder.png" alt="${esc(card.name)}">
                         <div class="detail-info">
                             <h1 class="detail-title">${esc(card.name)}</h1>
-                            <p class="detail-creator">作者：${esc(card.creator || '未知')}</p>
+                            <p class="detail-creator">作者：${esc(card.creator || '未知')}<button class="creator-edit" onclick="editCreator()" title="编辑作者">✎</button></p>
                             <div class="card-tags" style="margin-bottom: 16px;">
                                 ${(card.tags || []).map(tag => `
                                     <span class="card-tag">${esc(tag)}</span>
@@ -1478,6 +1498,23 @@
                 loadCardChats(card.id);
             } catch (error) {
                 alert('加载详情失败: ' + error.message);
+            }
+        }
+
+        // 修改作者
+        async function editCreator() {
+            if (!currentCard) return;
+            const newCreator = prompt('修改作者名称：', currentCard.creator || '');
+            if (newCreator === null) return;
+            try {
+                await api(`/cards/${currentCard.id}`, {
+                    method: 'PUT',
+                    body: { creator: newCreator.trim() }
+                });
+                showDetail(currentCard.id);
+                loadCards(state.currentPage);
+            } catch (error) {
+                alert('修改失败: ' + error.message);
             }
         }
 

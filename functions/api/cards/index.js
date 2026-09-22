@@ -4,7 +4,7 @@
 import { uploadToTelegram } from '../../utils/telegram.js';
 
 // 解析 PNG 文件中的角色卡数据
-function parseCharacterCard(buffer) {
+export function parseCharacterCard(buffer) {
     const textChunks = [];
     let offset = 8;
 
@@ -26,8 +26,10 @@ function parseCharacterCard(buffer) {
                 const value = text.slice(nullIndex + 1);
                 if (keyword === 'chara' || keyword === 'ccv3') {
                     try {
-                        const jsonStr = atob(value);
-                        return JSON.parse(jsonStr);
+                        // atob 输出为 Latin-1 字节串，需转字节后按 UTF-8 解码，否则中文变乱码
+                        const bin = atob(value.trim());
+                        const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+                        return JSON.parse(new TextDecoder().decode(bytes));
                     } catch (e) {
                         try {
                             return JSON.parse(value);

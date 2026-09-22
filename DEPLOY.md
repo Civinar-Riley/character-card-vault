@@ -15,9 +15,15 @@
    - 保存获得的 **Bot Token**
 
 3. **创建 Telegram 频道**
+
    - 在 Telegram 中创建一个新频道（公开或私有）
-   - 将刚才创建的 Bot 添加为频道管理员
-   - 保存频道的 **Chat ID**（可通过 @VersaToolsBot 或 @GetTheirIDBot 获取）
+   - **【必需】将 Bot 添加为频道管理员**，否则所有上传操作会报错
+     `Telegram upload failed: Bad Request: chat not found`
+     - 操作：打开频道 → 频道名称 → **管理员** → **添加管理员** → 搜索你创建的 Bot 用户名 → 添加
+     - 权限保持默认即可（Bot 需要发送消息/文件的权限，默认已包含）
+   - 获取并保存频道的 **Chat ID**（可通过 @VersaToolsBot 或 @GetTheirIDBot 获取）
+     - **注意格式**：频道/群组的 Chat ID 以 `-100` 开头（如 `-1001234567890`）。
+       有些工具获取到的是不带 `-100` 的短 ID，需要手动补上，否则同样报 `chat not found`
 
 4. **Fork 本仓库到 GitHub**
    - 访问本仓库页面，点击右上角 "Fork"
@@ -159,6 +165,13 @@ wrangler pages deploy public
 - 原因：环境变量未正确配置
 - 解决：检查环境变量中是否添加了 `TG_BOT_TOKEN` 和 `TG_CHAT_ID`
 
+**Q2.5: 上传时提示 "Bad Request: chat not found"**
+- 原因 1：Bot 未添加为频道管理员（最常见）——Bot 不在频道里就无法向频道发文件，即使 Chat ID 正确
+- 原因 2：Chat ID 格式错误——频道 ID 必须以 `-100` 开头（如 `-1001234567890`），检查是否漏掉了前缀
+- 原因 3：环境变量设置后未重新部署，改完记得重试部署
+- 自查方法：浏览器访问 `https://api.telegram.org/bot<你的Token>/getChat?chat_id=<你的ChatID>`，
+  能返回频道信息说明 Token 和 Chat ID 都正确，剩下的原因就是 Bot 不是管理员
+
 **Q3: 图片无法显示**
 - 原因：Telegram Bot 不是频道管理员，或 Chat ID 错误
 - 解决：确保 Bot 已添加为频道管理员，且 Chat ID 正确
@@ -180,8 +193,8 @@ wrangler pages deploy public
 
 - [ ] Cloudflare 账号已注册并验证
 - [ ] Telegram Bot 已创建，Bot Token 已保存
-- [ ] Telegram 频道已创建，Bot 已添加为管理员
-- [ ] 频道 Chat ID 已获取
+- [ ] Telegram 频道已创建，**Bot 已添加为频道管理员**（必需！否则上传报 chat not found）
+- [ ] 频道 Chat ID 已获取（格式为 `-100` 开头）
 - [ ] 仓库已 Fork 到 GitHub
 - [ ] KV 命名空间已创建
 - [ ] GitHub 仓库已连接到 Cloudflare Pages
