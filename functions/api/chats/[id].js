@@ -159,7 +159,15 @@ export async function onRequestDelete(context) {
             });
         }
 
-        // 注意：Telegram 文件无法通过 API 删除，这里只删除 KV 索引
+        // 删除 Telegram 消息
+        const tgBotToken = context.env.TG_BOT_TOKEN;
+        const tgChatId = context.env.TG_CHAT_ID;
+
+        if (tgBotToken && tgChatId && chatIndex.telegramMessageId) {
+            await deleteTelegramMessage(tgBotToken, tgChatId, chatIndex.telegramMessageId);
+        }
+
+        // 删除 KV 索引
         await context.env.CARDS_KV.delete(chatKey);
 
         return new Response(JSON.stringify({ ok: true }), {

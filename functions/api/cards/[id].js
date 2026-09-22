@@ -2,6 +2,8 @@
 // PUT /api/cards/:id - 更新角色卡
 // DELETE /api/cards/:id - 删除角色卡
 
+import { deleteTelegramMessage } from '../../utils/telegram.js';
+
 export async function onRequestGet(context) {
     try {
         const id = context.params.id;
@@ -91,18 +93,29 @@ export async function onRequestDelete(context) {
             });
         }
 
-        // 注意：Telegram 文件无法通过 API 删除，这里只删除 KV 索引
-        // Telegram 频道中的文件可以手动清理或保留
+        const tgBotToken = context.env.TG_BOT_TOKEN;
+        const tgChatId = context.env.TG_CHAT_ID;
 
-        await context.env.CARDS_KV.delete(`card:${id}`);
+        // 删除角色卡文件
+        if (tgBotToken && tgChatId && card.telegramMessageId) {
+            await deleteTelegramMessage(tgBotToken, tgChatId, card.telegramMessageId);
+        }
 
+        // 删除关联的聊天记录
         const chatList = await context.env.CARDS_KV.list({ prefix: 'chat:' });
         for (const chatKey of chatList.keys) {
             const chat = await context.env.CARDS_KV.get(chatKey.name, { type: 'json' });
             if (chat && chat.cardId === id) {
+                // 删除聊天记录文件
+                if (tgBotToken && tgChatId && chat.telegramMessageId) {
+                    await deleteTelegramMessage(tgBotToken, tgChatId, chat.telegramMessageId);
+                }
                 await context.env.CARDS_KV.delete(chatKey.name);
             }
         }
+
+        // 删除 KV 索引
+        await context.env.CARDS_KV.delete(`card:${id}`);
 
         return new Response(JSON.stringify({ ok: true }), {
             headers: { 'Content-Type': 'application/json' }

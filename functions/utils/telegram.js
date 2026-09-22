@@ -84,3 +84,32 @@ export async function validateBotToken(botToken) {
         return false;
     }
 }
+
+/**
+ * 删除 Telegram 消息
+ * @param {string} botToken - Telegram Bot Token
+ * @param {string} chatId - 频道 ID
+ * @param {number} messageId - 消息 ID
+ * @returns {Promise<boolean>} 是否成功
+ */
+export async function deleteTelegramMessage(botToken, chatId, messageId) {
+    try {
+        const response = await fetch(
+            `https://api.telegram.org/bot${botToken}/deleteMessage`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    message_id: messageId
+                })
+            }
+        );
+
+        const result = await response.json();
+        return result.ok;
+    } catch (error) {
+        console.error('Delete message failed:', error);
+        return false;
+    }
+}
