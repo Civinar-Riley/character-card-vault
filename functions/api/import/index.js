@@ -35,8 +35,9 @@ export async function onRequestPost(context) {
             index.tags = normalizeTags(card.tags);
             index.userTags = normalizeTags(card.userTags);
 
-            // 仅在缺少 telegramFileId 时重新上传（同一 TG 存储恢复时旧 fileId 仍有效）
-            if (!index.telegramFileId && Array.isArray(card.fileData) && card.fileData.length > 0) {
+            // 备份携带文件数据时重新上传（换号迁移到新频道，旧 fileId 已失效）；
+            // 无 fileData 则沿用原 telegramFileId 引用（同一 TG 存储恢复时仍有效）
+            if (Array.isArray(card.fileData) && card.fileData.length > 0) {
                 const bytes = new Uint8Array(card.fileData);
                 const fileName = card.telegramFileName || `${card.name || 'card'}.png`;
                 const upload = await uploadToTelegram(

@@ -14,6 +14,14 @@ export async function onRequestPost(context) {
             });
         }
 
+        // 导出会逐张从 Telegram 下载文件内嵌进 JSON，量大易超 Workers CPU 限制
+        if (cardIds.length > 20) {
+            return new Response(JSON.stringify({ ok: false, error: '一次最多导出 20 张（备份含卡文件）。如需备份全部元数据，请使用「全量备份」' }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
         const tgBotToken = context.env.TG_BOT_TOKEN;
 
         const exportData = {

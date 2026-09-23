@@ -1966,6 +1966,7 @@
         async function batchExport() {
             const ids = [...state.selectedIds];
             if (!ids.length) return alert('请先选择角色卡');
+            if (ids.length > 20) return alert('单次批量导出最多 20 张（备份含卡文件）。\n如需备份全部元数据，请使用工具栏的「全量备份」。');
             try {
                 const data = await api('/export/batch', {
                     method: 'POST',
@@ -2256,7 +2257,7 @@
 
         // 全量备份
         document.getElementById('exportAllBtn').addEventListener('click', async () => {
-            if (!confirm('确定要导出全量备份吗？')) return;
+            if (!confirm('全量备份包含全部卡片的元数据与标签（不含卡文件，恢复需在同一 Telegram 存储下使用）。\n换号迁移请使用「批量导出」（含文件，每次最多 20 张）。\n\n确定导出吗？')) return;
 
             try {
                 // POST /api/export/all（后端仅注册 POST，GET 会返回 405 HTML）
