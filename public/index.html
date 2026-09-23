@@ -2259,13 +2259,8 @@
             if (!confirm('确定要导出全量备份吗？')) return;
 
             try {
-                const response = await fetch(`${API_BASE}/export/all`, {
-                    headers: { 'Authorization': `Bearer ${state.token}` }
-                });
-
-                // 去掉 {ok, data} 包装层，与批量导出格式一致
-                const data = await response.json();
-                if (!data.ok) throw new Error(data.error || '导出失败');
+                // POST /api/export/all（后端仅注册 POST，GET 会返回 405 HTML）
+                const data = await api('/export/all', { method: 'POST' });
                 const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
