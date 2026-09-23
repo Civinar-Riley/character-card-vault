@@ -2204,6 +2204,7 @@
 
             let uploaded = 0;
             const failed = [];
+            const skipped = [];
             // 快照待传列表：上传途中重选文件不影响本轮循环
             const files = selectedFiles.slice();
             const total = files.length;
@@ -2238,18 +2239,22 @@
 
                 if (!lastError) {
                     uploaded++;
+                } else if (/已存在/.test(lastError.message)) {
+                    // 指纹查重命中（如恢复备份后重传同一张卡）：不算失败
+                    skipped.push(file.name);
                 } else {
                     failed.push(`${file.name}（${lastError.message}）`);
                 }
                 progressFill.style.width = `${(((i + 1) / total) * 100).toFixed(1)}%`;
             }
 
+            const skippedNote = skipped.length ? `\n已存在自动跳过 ${skipped.length} 张：${skipped.join('、')}` : '';
             uploadStatus.textContent = failed.length
                 ? `完成，失败 ${failed.length} 张：${failed.join('、')}`
                 : `上传完成: ${uploaded}/${total}`;
             alert(failed.length
-                ? `上传完成: ${uploaded}/${total}\n失败：\n${failed.join('\n')}`
-                : `上传完成: ${uploaded}/${total}`);
+                ? `上传完成: ${uploaded}/${total}\n失败：\n${failed.join('\n')}${skippedNote}`
+                : `上传完成: ${uploaded}/${total}${skippedNote}`);
             document.getElementById('uploadModal').classList.remove('active');
             document.getElementById('confirmUpload').disabled = false;
             loadCards();
