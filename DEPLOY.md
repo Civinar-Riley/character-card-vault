@@ -89,7 +89,7 @@
 **B. 站点自定义变量（改 `wrangler.toml` 的 `[vars]`）—— 全部可选**
 
 `SITE_NAME`（站名）、`SITE_TITLE`（标签页标题）、`SITE_BACKGROUND`（背景图 URL）、
-`PRESET_CREATOR`（详情页一键作者）、`PRESET_TAGS`（一键标签，逗号分隔）等非敏感变量
+`PRESET_CREATOR`（详情页一键作者，默认"西维纳尔"）、`PRESET_TAGS`（一键标签，逗号分隔，默认"已发布,NSFW,SFW"）等非敏感变量
 直接写在 Fork 仓库的 `wrangler.toml` `[vars]` 里（文件内有注释示例），**提交后自动部署生效，
 无需在仪表板添加**；删除某行则恢复代码默认值。
 
