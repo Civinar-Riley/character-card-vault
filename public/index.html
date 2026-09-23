@@ -1245,6 +1245,7 @@
                 applySettings();
             });
             document.getElementById('settingClearCache').addEventListener('click', () => {
+                thumbCache.forEach(u => URL.revokeObjectURL(u));
                 thumbCache.clear();
                 loadCards(state.currentPage);
             });
@@ -2181,10 +2182,12 @@
 
             let uploaded = 0;
             const failed = [];
-            const total = selectedFiles.length;
+            // 快照待传列表：上传途中重选文件不影响本轮循环
+            const files = selectedFiles.slice();
+            const total = files.length;
 
             for (let i = 0; i < total; i++) {
-                const file = selectedFiles[i];
+                const file = files[i];
                 const formData = new FormData();
                 formData.append('file', file);
 
