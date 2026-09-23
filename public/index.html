@@ -341,7 +341,8 @@
 
         .cards-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            /* 列数由设置面板控制（--grid-cols 2~6），小屏由媒体查询固定 2 列 */
+            grid-template-columns: repeat(var(--grid-cols, 6), minmax(0, 1fr));
             gap: 24px;
         }
 
@@ -878,7 +879,7 @@
             }
 
             .cards-grid {
-                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
 
@@ -1106,6 +1107,16 @@
                     </select>
                 </label>
                 <label class="setting-row">
+                    <span>网格每行数量</span>
+                    <select id="settingGridCols" class="input-field" style="width: auto; padding: 6px 10px;">
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                    </select>
+                </label>
+                <label class="setting-row">
                     <span>减弱动画</span>
                     <input type="checkbox" id="settingReduceMotion">
                 </label>
@@ -1167,7 +1178,8 @@
             theme: 'dark',
             pageSize: 30,
             reduceMotion: false,
-            viewMode: 'grid'
+            viewMode: 'grid',
+            gridCols: 6
         }, JSON.parse(localStorage.getItem('settings') || '{}'));
         // 迁移旧版主题偏好
         if (!localStorage.getItem('settings') && localStorage.getItem('theme') === 'light') {
@@ -1200,6 +1212,9 @@
             document.body.classList.toggle('light-theme', isLight);
             document.getElementById('themeToggle').textContent = isLight ? '☀️' : '🌙';
             document.body.classList.toggle('no-anim', settings.reduceMotion);
+            // 网格每行数量（2~6），非法存值回退默认 6
+            const cols = Math.min(6, Math.max(2, parseInt(settings.gridCols, 10) || 6));
+            document.documentElement.style.setProperty('--grid-cols', String(cols));
             if (state.viewMode !== settings.viewMode) {
                 state.viewMode = settings.viewMode;
                 document.querySelectorAll('.view-btn[data-view]').forEach(b => {
@@ -1215,6 +1230,7 @@
             document.getElementById('bgOpacityValue').textContent = `${settings.bgOpacity ?? 100}%`;
             document.getElementById('settingTheme').value = settings.theme;
             document.getElementById('settingPageSize').value = String(settings.pageSize);
+            document.getElementById('settingGridCols').value = String(Math.min(6, Math.max(2, parseInt(settings.gridCols, 10) || 6)));
             document.getElementById('settingReduceMotion').checked = settings.reduceMotion;
 
             const bgInput = document.getElementById('settingBackground');
@@ -1238,6 +1254,11 @@
                 settings.pageSize = parseInt(e.target.value, 10);
                 saveSettings();
                 loadCards(1);
+            });
+            document.getElementById('settingGridCols').addEventListener('change', (e) => {
+                settings.gridCols = parseInt(e.target.value, 10);
+                saveSettings();
+                applySettings();
             });
             document.getElementById('settingReduceMotion').addEventListener('change', (e) => {
                 settings.reduceMotion = e.target.checked;
